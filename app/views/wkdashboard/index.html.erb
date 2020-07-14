@@ -7,160 +7,409 @@
 </div>
 
 <%= javascript_tag do %>
-$(document).ready(function(){
-<% get_graphs_yaml_path.sort.each do |path| %>
-	var divstring = '<div class="icon-gravatar"><canvas id="<%=path%>" width="330" height="240"></canvas></div>';
-	$("#graph").append(divstring);
-  $.getJSON(<%= raw url_for(:controller => 'wkdashboard',
-    :action => 'graph',
-	:gPath => path).to_json %>, function(data){
-	var isNonPiechart = (data['graphtype'] != "pie") ? true : false;
-	var isPieChart = (data['graphtype'] == "pie") ? true : false;
-	var bgcolor = isNonPiechart ? 'rgba(255, 99, 132, 1)' : [ "#FF6384", "#84FF63","#8463FF","#6384FF","#F7464A", "#46BFBD", "#FDB45C", "#FEDCBA","#ABCDEF", "#DDDDDD", "#ABCABC", "#949FB1", "#4D5360"];
-	var bordercolor = isNonPiechart ? 'rgba(255, 99, 132, 1)' : 'rgba(255, 99, 132, 0.3)'
-	
-    var dataArr = [{
-		label: data['legentTitle1'],
-		fill: false,
-		backgroundColor: bgcolor,
-		borderColor: bordercolor,
-		borderWidth: 3,
-		data: data['graphpoints1']
-		}];
-	 if(data['legentTitle2']){
-		dataArr.push({
-			label: data['legentTitle2'],
-			fill: false,
-			backgroundColor: 'rgba(54, 162, 235, 0.7)',
-			borderColor: 'rgb(54, 162, 235)',
-			data: data['graphpoints2']
-		});
-	  }
-    var chartData = {
-      labels: data['labels'],
-      datasets: dataArr
-    };
-	
-	Chart.pluginService.register({
-			beforeRender: function (chart) {
-				if (chart.config.options.showAllTooltips) {
-					chart.pluginTooltips = [];
-					chart.config.data.datasets.forEach(function (dataset, i) {
-						chart.getDatasetMeta(i).data.forEach(function (sector, j) {
-							chart.pluginTooltips.push(new Chart.Tooltip({
-								_chart: chart.chart,
-								_chartInstance: chart,
-								_data: chart.data,
-								_options: chart.options.tooltips,
-								_active: [sector]
-							}, chart));
-						});
-					});
-					chart.options.tooltips.enabled = false;
-				}
-			},
-			afterDraw: function (chart, easing) {
-				if (chart.config.options.showAllTooltips) {
-					if (!chart.allTooltipsOnce) {
-						if (easing !== 1)
-							return;
-						chart.allTooltipsOnce = true;
-					}
-					chart.options.tooltips.enabled = true;
-					Chart.helpers.each(chart.pluginTooltips, function (tooltip) {
-						tooltip.initialize();
-						tooltip.update();
-						tooltip.pivot();
-						tooltip.transition(easing).draw();
-					});
-					chart.options.tooltips.enabled = false;
-				}
-			},
-		beforeDraw: function (chart, easing) {
-			if (chart.config.options.chartArea && chart.config.options.chartArea.backgroundColor) {
-				var ctx = chart.chart.ctx;
-				var chartArea = chart.chartArea;
-				ctx.save();
-				ctx.fillStyle = chart.config.options.chartArea.backgroundColor;
-				ctx.fillRect(chartArea.left, chartArea.top, chartArea.right - chartArea.left, chartArea.bottom - chartArea.top);
-				ctx.restore();
-			}
-		}
-	});
+	$(document).ready(function(){
+	<% get_graphs_yaml_path.sort.each do |path| %>
+		var divstring = '<div class="icon-gravatar"><canvas id="<%=path%>" width="330" height="240"></canvas></div>';
+		$("#graph").append(divstring);
+	  $.getJSON(<%= raw url_for(:controller => 'wkdashboard',
+		:action => 'graph',
+		:gPath => path).to_json %>, function(data){
+		var isbarChart = (data['graphtype'] == "bar");
+		var isfunnelChart = (data['graphtype'] == "funnel");
+		var isPieChart = (data['graphtype'] == "pie");
 		
-	new Chart(document.getElementById("<%=path%>").getContext("2d"), {
-		type: data['graphtype'],
-		data: chartData,
-		options: {
-		tooltips: {
-			titleFontColor: 'rgba(0, 0, 0, 1)',
-			bodyFontColor: 'rgba(0, 0, 0, 1)',
-			backgroundColor: 'rgba(0, 0, 0, 0)',
-			bodyFontSize: 12
-		},
-		showAllTooltips: isPieChart,
-		chartArea: {
-			backgroundColor: 'rgba(240, 240, 240, 1)'
-		},
-		scales: {
-			yAxes: [{
-			gridLines : {
-					drawBorder: isNonPiechart,
-					display : isNonPiechart
+		var bgcolor = !isPieChart && !isfunnelChart && !isbarChart ? 'rgba(255, 99, 132, 1)' : [ "#FF6384", "#84FF63","#8463FF","#6384FF","#F7464A", "#46BFBD", "#FDB45C", "#FEDCBA","#ABCDEF", "#DDDDDD", "#ABCABC", "#949FB1", "#4D5360"];
+		var bordercolor = !isPieChart && !isfunnelChart && !isbarChart ? 'rgba(255, 99, 132, 1)' : 'rgba(255, 99, 132, 0.3)'
+		
+		var dataArr = [{
+			label: data['legentTitle1'],
+			fill: false,
+			backgroundColor: bgcolor,
+			borderColor: bordercolor,
+			borderWidth: 3,
+			data: data['graphpoints1']
+			}];
+		 if(data['legentTitle2']){
+			dataArr.push({
+				label: data['legentTitle2'],
+				fill: false,
+				backgroundColor: 'rgba(54, 162, 235, 0.7)',
+				borderColor: 'rgb(54, 162, 235)',
+				data: data['graphpoints2']
+			});
+		  }
+		var chartData = {
+		  labels: data['labels'],
+		  datasets: dataArr
+		};
+		
+		Chart.pluginService.register({
+				beforeRender: function (chart) {
+					if (chart.config.options.showAllTooltips) {
+						chart.pluginTooltips = [];
+						chart.config.data.datasets.forEach(function (dataset, i) {
+							chart.getDatasetMeta(i).data.forEach(function (sector, j) {
+								chart.pluginTooltips.push(new Chart.Tooltip({
+									_chart: chart.chart,
+									_chartInstance: chart,
+									_data: chart.data,
+									_options: chart.options.tooltips,
+									_active: [sector]
+								}, chart));
+							});
+						});
+						chart.options.tooltips.enabled = false;
+					}
 				},
-			ticks: {
-					display: isNonPiechart,
-					autoSkip: false,
-					maxRotation: 0,
-					minRotation: 0
+				afterDraw: function (chart, easing) {
+					if (chart.config.options.showAllTooltips) {
+						if (!chart.allTooltipsOnce) {
+							if (easing !== 1)
+								return;
+							chart.allTooltipsOnce = true;
+						}
+						chart.options.tooltips.enabled = true;
+						Chart.helpers.each(chart.pluginTooltips, function (tooltip) {
+							tooltip.initialize();
+							tooltip.update();
+							tooltip.pivot();
+							tooltip.transition(easing).draw();
+						});
+						chart.options.tooltips.enabled = false;
+					}
 				},
+			beforeDraw: function (chart, easing) {
+				if (chart.config.options.chartArea && chart.config.options.chartArea.backgroundColor) {
+					var ctx = chart.chart.ctx;
+					var chartArea = chart.chartArea;
+					ctx.save();
+					ctx.fillStyle = chart.config.options.chartArea.backgroundColor;
+					ctx.fillRect(chartArea.left, chartArea.top, chartArea.right - chartArea.left, chartArea.bottom - chartArea.top);
+					ctx.restore();
+				}
+			}
+		});
+			
+		new Chart(document.getElementById("<%=path%>").getContext("2d"), {
+			type: data['graphtype'],
+			data: chartData,
+			options: {
+			sort: isfunnelChart ? 'desc' : 'asc',
+			tooltips: {
+				titleFontColor: 'rgba(0, 0, 0, 1)',
+				bodyFontColor: 'rgba(0, 0, 0, 1)',
+				backgroundColor: 'rgba(0, 0, 0, 0)',
+				bodyFontSize: 12
+			},
+			showAllTooltips: isPieChart || isfunnelChart,
+			chartArea: {
+				backgroundColor: 'rgba(240, 240, 240, 1)'
+			},
+			scales: {
+				yAxes: [{
+				gridLines : {
+						drawBorder: !isPieChart && !isfunnelChart ,
+						display : !isPieChart && !isfunnelChart
+					},
+				ticks: {
+						display: !isPieChart && !isfunnelChart ,
+						autoSkip: false,
+						maxRotation: 0,
+						minRotation: 0,
+						beginAtZero: true
+					},
 				scaleLabel: {
-					display: isNonPiechart,
-					labelString: data['yTitle'],
-					fontColor: "#ff0000"
+						display: !isPieChart && !isfunnelChart,
+						labelString: data['yTitle'],
+						fontColor: "#ff0000"
+						}
+					}],
+				xAxes: [{
+				gridLines : {
+						drawBorder: !isPieChart && !isfunnelChart,
+						display : !isPieChart && !isfunnelChart
+					},
+					ticks: {
+						display: !isPieChart && !isfunnelChart,
+						autoSkip: true,
+						maxRotation: 0,
+						minRotation: 0
+					},
+					scaleLabel: {
+						display: !isPieChart && !isfunnelChart ,
+						labelString: data['xTitle'],
+						fontColor: '#ff0000'
 					}
 				}],
-			xAxes: [{
-			gridLines : {
-					drawBorder: isNonPiechart,
-					display : isNonPiechart
-				},
-				ticks: {
-					display: isNonPiechart,
-					autoSkip: true,
-					maxRotation: 0,
-					minRotation: 0
-				},
-				scaleLabel: {
-					display: isNonPiechart,
-					labelString: data['xTitle'],
-					fontColor: '#ff0000'
+			},
+			elements: {
+			  rectangle: 
+			  {
+			  borderWidth: 2
+			  }
+			},
+			responsive: true,
+			legend: {
+			  display: !isPieChart && !isfunnelChart && !isbarChart,
+			  position: 'bottom'
+			  },
+			title: {fontColor: "#000",
+			  display: true,
+			  text: data['graphName']
 				}
-			}],
-		},
-		elements: {
-		  rectangle: 
-		  {
-		  borderWidth: 2
-		  }
-		},
-		responsive: true,
-		legend: {
-		  display: isNonPiechart,
-		  position: 'bottom'
-		  },
-		title: {fontColor: "#000",
-		  display: true,
-		  text: data['graphName']
 			}
-		}
-	});
-  });
-<% end %>
-  });
-<% end %>
+		});
+	  });
+	<% end %>
+	// Get the modal
+var modal = document.getElementById("myModal");
 
+var modalcontent = document.getElementById("modal-content"); 
+// Get the button that opens the modal
+var canvas = document.getElementsByTagName("canvas");
+
+// Get the <span> element that closes the modal
+var span = document.getElementsByClassName("close")[0];
+
+// When the user clicks the button, open the modal 
+for (item of canvas) { 
+  	item.onclick = function(e) {
+		debugger;
+		var controller_url = <%= raw url_for(:controller => 'wkdashboard',:action => 'graph').to_json %> ;
+		modalcontent.innerHTML = "";
+		can = e.target;
+		var divstring = '<div class="icon-gravatar"><canvas id="modal-' + can.id + '" width="800px" height="1000px"></canvas></div>';
+		
+
+		
+		$(modalcontent).append(divstring);
+		var ctx = document.getElementById("modal-" + can.id).getContext("2d")
+		ctx.canvas.width  = 0.8 * window.innerWidth;
+		ctx.canvas.height = 0.8 * window.innerHeight;
+		
+		$.getJSON(controller_url + "?gPath=" + can.id, function(data){
+		var isbarChart = (data['graphtype'] == "bar");
+		var isfunnelChart = (data['graphtype'] == "funnel");
+		var isPieChart = (data['graphtype'] == "pie");
+		
+		var bgcolor = !isPieChart && !isfunnelChart && !isbarChart ? 'rgba(255, 99, 132, 1)' : [ "#FF6384", "#84FF63","#8463FF","#6384FF","#F7464A", "#46BFBD", "#FDB45C", "#FEDCBA","#ABCDEF", "#DDDDDD", "#ABCABC", "#949FB1", "#4D5360"];
+		var bordercolor = !isPieChart && !isfunnelChart && !isbarChart ? 'rgba(255, 99, 132, 1)' : 'rgba(255, 99, 132, 0.3)'
+		
+		var dataArr = [{
+			label: data['legentTitle1'],
+			fill: false,
+			backgroundColor: bgcolor,
+			borderColor: bordercolor,
+			borderWidth: 3,
+			data: data['graphpoints1']
+			}];
+		 if(data['legentTitle2']){
+			dataArr.push({
+				label: data['legentTitle2'],
+				fill: false,
+				backgroundColor: 'rgba(54, 162, 235, 0.7)',
+				borderColor: 'rgb(54, 162, 235)',
+				data: data['graphpoints2']
+			});
+		  }
+		var chartData = {
+		  labels: data['labels'],
+		  datasets: dataArr
+		};
+		
+		Chart.pluginService.register({
+				beforeRender: function (chart) {
+					if (chart.config.options.showAllTooltips) {
+						chart.pluginTooltips = [];
+						chart.config.data.datasets.forEach(function (dataset, i) {
+							chart.getDatasetMeta(i).data.forEach(function (sector, j) {
+								chart.pluginTooltips.push(new Chart.Tooltip({
+									_chart: chart.chart,
+									_chartInstance: chart,
+									_data: chart.data,
+									_options: chart.options.tooltips,
+									_active: [sector]
+								}, chart));
+							});
+						});
+						chart.options.tooltips.enabled = false;
+					}
+				},
+				afterDraw: function (chart, easing) {
+					if (chart.config.options.showAllTooltips) {
+						if (!chart.allTooltipsOnce) {
+							if (easing !== 1)
+								return;
+							chart.allTooltipsOnce = true;
+						}
+						chart.options.tooltips.enabled = true;
+						Chart.helpers.each(chart.pluginTooltips, function (tooltip) {
+							tooltip.initialize();
+							tooltip.update();
+							tooltip.pivot();
+							tooltip.transition(easing).draw();
+						});
+						chart.options.tooltips.enabled = false;
+					}
+				},
+			beforeDraw: function (chart, easing) {
+				if (chart.config.options.chartArea && chart.config.options.chartArea.backgroundColor) {
+					var ctx = chart.chart.ctx;
+					var chartArea = chart.chartArea;
+					ctx.save();
+					ctx.fillStyle = chart.config.options.chartArea.backgroundColor;
+					ctx.fillRect(chartArea.left, chartArea.top, chartArea.right - chartArea.left, chartArea.bottom - chartArea.top);
+					ctx.restore();
+				}
+			}
+		});
+			
+		new Chart(document.getElementById("modal-" + can.id).getContext("2d"), {
+			type: data['graphtype'],
+			data: chartData,
+			options: {
+			sort: isfunnelChart ? 'desc' : 'asc',
+			tooltips: {
+				titleFontColor: 'rgba(0, 0, 0, 1)',
+				bodyFontColor: 'rgba(0, 0, 0, 1)',
+				backgroundColor: 'rgba(0, 0, 0, 0)',
+				bodyFontSize: 12
+			},
+			showAllTooltips: isPieChart || isfunnelChart,
+			chartArea: {
+				backgroundColor: 'rgba(240, 240, 240, 1)'
+			},
+			scales: {
+				yAxes: [{
+					gridLines : {
+							drawBorder: !isPieChart && !isfunnelChart ,
+							display : !isPieChart && !isfunnelChart
+						},
+					ticks: {
+							display: !isPieChart && !isfunnelChart ,
+							autoSkip: false,
+							maxRotation: 0,
+							minRotation: 0,
+							beginAtZero: true
+						},
+					scaleLabel: {
+							display: !isPieChart && !isfunnelChart,
+							labelString: data['yTitle'],
+							fontColor: "#ff0000"
+							}
+					}],
+				xAxes: [{
+					gridLines : {
+							drawBorder: !isPieChart && !isfunnelChart,
+							display : !isPieChart && !isfunnelChart
+						},
+					ticks: {
+						display: !isPieChart && !isfunnelChart,
+						autoSkip: true,
+						maxRotation: 0,
+						minRotation: 0
+					},
+					scaleLabel: {
+						display: !isPieChart && !isfunnelChart ,
+						labelString: data['xTitle'],
+						fontColor: '#ff0000'
+					}
+				}],
+			},
+			elements: {
+			  rectangle: 
+			  {
+			  borderWidth: 2
+			  }
+			},
+			responsive: true,
+			legend: {
+			  display: !isPieChart && !isfunnelChart && !isbarChart,
+			  position: 'bottom'
+			  },
+			title: {fontColor: "#000",
+			  display: true,
+			  text: data['graphName']
+				}
+			}
+		});
+	  });
+		
+		modal.style.display = "block";
+		
+		
+		
+	}
+} 
+
+
+// When the user clicks on <span> (x), close the modal
+span.onclick = function() {
+  modal.style.display = "none";
+}
+
+// When the user clicks anywhere outside of the modal, close it
+window.onclick = function(event) {
+  if (event.target == modal) {
+    modal.style.display = "none";
+  }
+}
+	
+	  });
+<% end %>
 
 <% content_for :header_tags do %>
   <%= javascript_include_tag "Chart.bundle.min" %>
+  <%= javascript_include_tag "Chart.funnel.min" %>
 <% end %>
+
+
+<!-- modal charts -->
+
+<style>
+/* The Modal (background) */
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  padding-top: 100px; /* Location of the box */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content */
+.modal-content {
+  background-color: #fefefe;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+}
+
+/* The Close Button */
+.close {
+  color: #aaaaaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: #000;
+  text-decoration: none;
+  cursor: pointer;
+}
+</style>
+
+<div id="myModal" class="modal">
+<!-- Modal content -->
+    <span class="close">&times;</span>
+    <div id="modal-content">
+	</div>
+</div>

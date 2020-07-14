@@ -19,8 +19,7 @@ class WkinvoiceController < WkorderentityController
 	@@invmutex = Mutex.new
 
 	def newOrderEntity(parentId, parentType)	
-		newInvoice(parentId, parentType)
-	end
+		newInvoice(parentId, parentType)	end
 
 	def newInvoice(parentId, parentType)
 		invoiceFreq = getInvFreqAndFreqStart

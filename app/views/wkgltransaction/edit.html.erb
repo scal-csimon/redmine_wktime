@@ -61,7 +61,8 @@ transrowMsg =  "<%= l(:label_trans_row_validmsg)  %>";
 					<%=h hidden_field_tag("txn_id#{row_index}",   entry.id )  %>
 				</td>			
 				<td class="lbl-txt-align" headers="txn_particular" >
-					<%=h select_tag("txn_particular#{row_index}", options_for_select(@ledgers, :selected => entry.ledger_id), :style => "width:200px;") %>
+					<%=h select_tag("txn_particular#{row_index}", options_for_select(@ledgers, :selected => entry.ledger_id)) %>
+					
 				</td>
 				<td class="lbl-txt-align" headers="original_currency">
 					<label id="original_currency#{row_index}"><%= (entry.original_currency.blank? ? "" : entry.original_currency ) %></label>

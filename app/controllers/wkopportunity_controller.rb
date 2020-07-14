@@ -8,7 +8,7 @@ class WkopportunityController < WkcrmController
 
 		sort_update 'opportunity_name' => "#{WkOpportunity.table_name}.name",
 					'parent_type' => "#{WkOpportunity.table_name}.parent_type",
-					'sales_stage' => "E.name",
+					'sales_stage' => "E.position",
 					'amount' => "#{WkOpportunity.table_name}.amount",
 					'close_date' => "#{WkOpportunity.table_name}.close_date",
 					'assigned_user_id' => "CONCAT(U.firstname, U.lastname)",

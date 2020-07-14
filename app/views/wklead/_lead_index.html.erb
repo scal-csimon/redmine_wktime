@@ -15,7 +15,9 @@
 					%> 	
 					<td><%=h select_tag('status', options_for_select(leadStatusArr, :selected => session[controller_name].try(:[], :status))) %></td>
 					<th><label for='location' style="padding-left: 10px;"><%= l(:label_location) %></label></th>								
-					<td><%=h select_tag("location_id", generic_options_for_select(WkLocation, nil, 'name', 'name', 'id', session[controller_name].try(:[], :location_id), true)) %></td>
+					<td><%=h select_tag("location_id", generic_options_for_select(WkLocation, nil, 'name', 'name', 'id', session[controller_name].try(:[], :location_id), true)) %>
+					<th><label for='assigned_user' style="padding-left: 10px;"><%= l(:field_assigned_to) %></label></th>	
+					<td><%=h select_tag("assigned_user_id", options_for_select(groupOfUsers, :selected => session[controller_name].try(:[], :assigned_user_id) )) %> </td>
 					<td><%= submit_tag l(:button_apply), :class => "small", :name => nil %></td>
 					<td><%= link_to l(:button_clear), {:controller => controller_name, :action => 'index', :tab => controller_name}, :class => 'icon icon-reload' %></td>
 				</tr>

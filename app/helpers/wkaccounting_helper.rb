@@ -50,7 +50,10 @@ include WktimeHelper
 			"SC" => l(:label_sundry_creditors),
 			"SD" => l(:label_sundry_debtors),
 			"SP" => l(:label_suspense_ac),
-			"UL" => l(:label_unsecured_loans)
+			"UL" => l(:label_unsecured_loans),
+			"WH" => l(:label_withholdings),
+			"WHC" => l(:label_withholdings_canada),
+			"WHQ" => l(:label_withholdings_quebec)
 			}
 		ledgerType
 	end
@@ -63,7 +66,7 @@ include WktimeHelper
 		ledgerTypeGrps = {
 			"CA" => ['BA', 'CS', 'DP', 'AD', 'SD', 'IN', 'MS'], #'SH',
 			"L" => ['OD', 'SL', 'UL', 'OC'],
-			"CL" => ['T', 'PR', 'SC'],
+			"CL" => ['T', 'PR', 'SC', 'WHC', 'WHQ'],
 			"C" => ['RS', 'RE'],
 			"PL" => ['DI', 'DE', 'II', 'IE', 'SA', 'PA']
 		}

@@ -270,7 +270,7 @@ include QueriesHelper
 			if !@entries.blank? || !params[:wktime_approve].blank? || 
 				(!params[:wktime_reject].blank? || !params[:hidden_wk_reject].blank?) ||
 				!params[:wktime_unsubmit].blank? || !params[:wktime_unapprove].blank? ||
-				((!params[:wktime_submit].blank? || !cvParams.blank?) && total > 0.0) # && @wkvalidEntry
+				((!params[:wktime_submit].blank? || !cvParams.blank?) && total != 0.0) # && @wkvalidEntry
 				respMsg = l(:notice_successful_update)
 			else
 				respMsg = l(:error_wktime_save_nothing)

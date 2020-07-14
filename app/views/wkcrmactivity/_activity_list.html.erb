@@ -33,7 +33,8 @@
 				<% activities.each do |entry| %>
 					<tr>
 						<td class="lbl-txt-align"><%=h acttypeHash[entry.activity_type] %></td>
-						<td class="lbl-txt-align"><%=h entry.name %></td>
+						<!-- <td class="lbl-txt-align"><%=h entry.name %></td> -->
+						<td class="lbl-txt-align"><%= link_to entry.name, {:controller => 'wkcrmactivity', :action => 'edit', :activity_id => entry.id, :tab => 'wkcrmactivity', :controller_from => controller_name, :action_from => action_name }, :title => l(:button_edit) %></td>
 						<td class="lbl-txt-align"><%=h (entry.activity_type == 'M' || entry.activity_type == 'C' ? meetCallStatusHash[entry.status] : taskStatusHash[entry.status])  %></td>
 						<td class="lbl-txt-align"><%=h relatedHash[entry.parent_type] %></td>
 						<td class="lbl-txt-align"><%=h entry.start_date.localtime.strftime("%Y-%m-%d %H:%M:%S") %></td>

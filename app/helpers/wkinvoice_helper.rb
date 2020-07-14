@@ -49,6 +49,9 @@ include WkpayrollHelper
 		@invoice.parent_type = parentType
 		@invoice.invoice_type = invoiceType unless invoiceType.blank?
 		@invoice.invoice_number = getPluginSetting(getOrderNumberPrefix)
+		
+		logger.info "projectId" + projectId.to_s
+		
 		unless isgenerate
 			errorMsg = saveInvoice
 		else
@@ -111,6 +114,7 @@ include WkpayrollHelper
 		else
 			accountProject = WkAccountProject.where("parent_id = ? and parent_type = ? and project_id = ?", @invoice.parent_id, @invoice.parent_type, projectId)
 			errorMsg = addInvoiceItem(accountProject[0])
+
 		end
 		errorMsg
 	end
@@ -172,7 +176,7 @@ include WkpayrollHelper
 		genInvFrom = getUnbillEntryStart(@invoice.start_date) #genInvFrom.blank? ? @invoice.start_date : genInvFrom.to_date
 		# timeEntries = TimeEntry.joins("left outer join custom_values on time_entries.id = custom_values.customized_id and custom_values.customized_type = 'TimeEntry' and custom_values.custom_field_id = #{getSettingCfId('wktime_billing_id_cf')}").where(project_id: accountProject.project_id, spent_on: genInvFrom .. @invoice.end_date).where("custom_values.value is null OR #{getSqlLengthQry("custom_values.value")} = 0 ")
 		
-		timeEntries = TimeEntry.includes(:spent_for).where(project_id: accountProject.project_id, spent_on: genInvFrom .. @invoice.end_date, wk_spent_fors: { spent_for_type: [accountProject.parent_type, nil], spent_for_id: [accountProject.parent_id, nil], invoice_item_id: nil })
+		timeEntries = TimeEntry.joins(:project).includes(:spent_for).where(project_id: accountProject.project_id , spent_on: genInvFrom .. @invoice.end_date, wk_spent_fors: { spent_for_type: [accountProject.parent_type, nil], spent_for_id: [accountProject.parent_id, nil], invoice_item_id: nil })
 		errorMsg = nil
 		totalAmount = 0
 		lastUserId = 0

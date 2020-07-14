@@ -318,19 +318,25 @@
 				<td class="lbl-txt-align" style="width:140px;"><label id="rounditem_type<%= round_index.to_s %>"></label></td>
 				<td class="lbl-txt-align" style="width:330px;"></td>
 				<td class="lbl-txt-align" style="width:330px;"></td>
-				<td class="lbl-txt-align" style="padding-right:65px;" ><%= entry.original_currency %><label id="roundamount"><%= html_hours("%.2f" % entry.original_amount)   %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<%= toCurrency %><%= html_hours("%.2f" % entry.amount) %></label></td>
+				<td class="lbl-txt-align" style="padding-right:65px;" >
+					<%= entry.original_currency %>
+					<label id="roundamount">
+						<%= html_hours("%.2f" % entry.original_amount)   %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<%= toCurrency %><%= html_hours("%.2f" % entry.amount) %>
+					</label>
+				</td>
 				<% org_total = org_total + entry.original_amount %>
 				<% total = total + entry.amount %>
 			 </tr>
 			
 			<tr>
-				<td colspan="8" style="padding-right:50px;"><b><label id="roundtotalamount" style="float:right;">Total : <%= @invoiceItem[0].blank? ? "" : @invoiceItem[0].original_currency %> <%= html_hours("%.2f" % org_total) %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<%= toCurrency %><%= html_hours("%.2f" % total) %> </label></b><td>
+				<td colspan="8" style="padding-right:50px;"><b>
+					<label id="roundtotalamount" style="float:right;">Total : <%= @invoiceItem[0].blank? ? "" : @invoiceItem[0].original_currency %> <%= html_hours("%.2f" % org_total) %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<%= toCurrency %><%= html_hours("%.2f" % total) %> </label></b><td>
 			</tr>
 			  <% round_index = round_index + 1 %>	
 		<% end %>
 		<% if isRundFOrInvItem %>
 			<% 
-				roundOff_amount = getExchangedAmount( @currency, (org_total.round - org_total))
+				roundOff_amount = getExchangedAmount( @currency, (org_total.round(2) - org_total))
 			%>
 			<tr>
 				<td class="lbl-txt-align" style="width:20px;">
@@ -342,8 +348,8 @@
 				<td class="lbl-txt-align" style="width:140px;"><label id="rounditem_type<%= round_index.to_s %>"></label></td>
 				<td class="lbl-txt-align" style="width:330px;"></td>
 				<td class="lbl-txt-align" style="width:330px;"></td>
-				<td class="lbl-txt-align" style="padding-right:85px;" ><%= @currency %><label id="roundamount"><%= html_hours("%.2f" % (org_total.round - org_total))   %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<%= toCurrency %><%= html_hours("%.2f" % roundOff_amount) %></label></td>
-				<% org_total = org_total + (org_total.round - org_total) %>
+				<td class="lbl-txt-align" style="padding-right:85px;" ><%= @currency %><label id="roundamount"><%= html_hours("%.2f" % (org_total.round(2) - org_total))   %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<%= toCurrency %><%= html_hours("%.2f" % roundOff_amount) %></label></td>
+				<% org_total = org_total + (org_total.round(2) - org_total) %>
 				<% total = total + roundOff_amount %>
 			</tr>
 			<tr>
@@ -353,7 +359,7 @@
 		<% end %>
 	<% else %>
 		<% 
-			roundOff_amount = getExchangedAmount( @currency, (org_total.round - org_total))
+			roundOff_amount = getExchangedAmount( @currency, (org_total.round(2) - org_total))
 		%>
 		<tr>
 			<td class="lbl-txt-align" style="width:20px;">
@@ -365,8 +371,8 @@
 			<td class="lbl-txt-align" style="width:140px;"><label id="rounditem_type<%= round_index.to_s %>"></label></td>
 			<td class="lbl-txt-align" style="width:330px;"></td>
 			<td class="lbl-txt-align" style="width:330px;"></td>
-			<td class="lbl-txt-align" style="padding-right:65px;" ><%= @currency %><label id="roundamount"><%= html_hours("%.2f" % (org_total.round - org_total)) %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<%= toCurrency %><%= html_hours("%.2f" % roundOff_amount) %></label></td>
-			<% org_total = org_total + (org_total.round - org_total) %>
+			<td class="lbl-txt-align" style="padding-right:65px;" ><%= @currency %><label id="roundamount"><%= html_hours("%.2f" % (org_total.round(2) - org_total)) %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<%= toCurrency %><%= html_hours("%.2f" % roundOff_amount) %></label></td>
+			<% org_total = org_total + (org_total.round(2) - org_total) %>
 			<% total = total + roundOff_amount %>
 		 </tr>
 		<tr><td colspan="8" style="padding-right:50px;"><b><label id="roundtotalamount" style="float:right;">Total : <%= @invoiceItem.blank? ? @currency : (@invoiceItem[0].blank? ? @currency : @invoiceItem[0].original_currency) %> <%= html_hours("%.2f" % org_total) %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <%= toCurrency %><%= html_hours("%.2f" % total) %></label></b><td></tr>

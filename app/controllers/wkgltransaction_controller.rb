@@ -151,6 +151,7 @@ class WkgltransactionController < WkaccountingController
 				errorMsg = wkgltransaction.errors.full_messages.join("<br>")
 			end
 			if errorMsg.blank?
+				# errorMsg = "test"
 				for i in 1..params[:txntotalrow].to_i			
 					if params["txn_id#{i}"].blank?
 						wktxnDetail = WkGlTransactionDetail.new
@@ -159,14 +160,14 @@ class WkgltransactionController < WkaccountingController
 						
 					end
 					wktxnDetail.ledger_id = params["txn_particular#{i}"]
-					if (params["txn_debit#{i}"].blank? || params["txn_debit#{i}"].to_i == 0) && (params["txn_credit#{i}"].blank? || params["txn_credit#{i}"].to_i == 0)
+					if (params["txn_debit#{i}"].blank? || params["txn_debit#{i}"].to_f == 0) && (params["txn_credit#{i}"].blank? || params["txn_credit#{i}"].to_f == 0)
 						next
-					elsif params["txn_debit#{i}"].blank? || params["txn_debit#{i}"].to_i == 0
+					elsif params["txn_debit#{i}"].blank? || params["txn_debit#{i}"].to_f == 0.00
 						wktxnDetail.detail_type = 'c'
-						wktxnDetail.amount = params["txn_credit#{i}"]
+						wktxnDetail.amount = params["txn_credit#{i}"].to_f
 					else
 						wktxnDetail.detail_type = 'd'
-						wktxnDetail.amount = params["txn_debit#{i}"]
+						wktxnDetail.amount = params["txn_debit#{i}"].to_f
 					end
 					wktxnDetail.currency = Setting.plugin_redmine_wktime['wktime_currency']
 					unless wktxnDetail.valid? 		
@@ -179,12 +180,15 @@ class WkgltransactionController < WkaccountingController
 						wktxnDetail.save() unless wktxnDetail.amount.blank?
 						
 						arrId << wktxnDetail.id
+						
 					end
-
+					# errorMsg = errorMsg.blank? ? "params[txn_debit#{i}].to_f = " + "#{params["txn_debit#{i}"].to_f.to_s}" : "params[txn_debit#{i}].to_f = " + "#{params["txn_debit#{i}"].to_f.to_s}" + "<br/>" + errorMsg
+					# errorMsg = "params[txn_credit#{i}].to_f = " + params["txn_credit#{i}"].to_f.to_s + "<br/>" + errorMsg
 				end
 				unless arrId.blank?
 					WkGlTransactionDetail.where(:gl_transaction_id => wkgltransaction.id).where.not(:id => arrId).delete_all()
 				end
+				
 			end
 		else
 			
@@ -205,6 +209,7 @@ class WkgltransactionController < WkaccountingController
 				errorMsg = l(:error_dn_msg)
 			end
 			#errorMsg = l(:label_transaction) + " " + l('activerecord.errors.messages.invalid')
+			#errorMsg = errorMsg.blank? ? "test 2" : "" + "test2 <br/>" + errorMsg
 		end
 		if errorMsg.blank?
 			action_name = params[:gltransaction_save_continue].blank? ? "index" : "edit"
@@ -220,8 +225,8 @@ class WkgltransactionController < WkaccountingController
 	
 	def validateTransaction
 		ret = true
-		txnDebitTotal = 0
-		txnCreditTotal = 0
+		txnDebitTotal = 0.00
+		txnCreditTotal = 0.00
 		@tempwktxnDetail ||= Array.new
 		@tempwkgltransaction = nil
 		ledgerArray = WkLedger.pluck(:id, :ledger_type)
@@ -281,12 +286,12 @@ class WkgltransactionController < WkaccountingController
 		end
 		
 		for i in 1..params[:txntotalrow].to_i
-			txnDebitTotal = txnDebitTotal + params["txn_debit#{i}"].to_i if !params["txn_debit#{i}"].blank?
-			txnCreditTotal = txnCreditTotal + params["txn_debit#{i}"].to_i if !params["txn_debit#{i}"].blank?
+			txnDebitTotal = txnDebitTotal + params["txn_debit#{i}"].to_f if !params["txn_debit#{i}"].blank?
+			txnCreditTotal = txnCreditTotal + params["txn_debit#{i}"].to_f if !params["txn_debit#{i}"].blank?
 		end
 		
 		if ret
-			ret = txnDebitTotal == txnCreditTotal && txnDebitTotal != 0  ? true : false			
+			ret = txnDebitTotal == txnCreditTotal && txnDebitTotal != 0.00  ? true : false			
 		end
 		
 		#Repopulate the transaction page. Get and set the transaction and transaction detail values.
@@ -309,10 +314,10 @@ class WkgltransactionController < WkaccountingController
 				wktxnDetail.ledger_id = params["txn_particular#{i}"]
 				if params["txn_debit#{i}"].blank?
 					wktxnDetail.detail_type = 'c'
-					wktxnDetail.amount = params["txn_credit#{i}"]
+					wktxnDetail.amount = params["txn_credit#{i}"].to_f
 				else
 					wktxnDetail.detail_type = 'd'
-					wktxnDetail.amount = params["txn_debit#{i}"]
+					wktxnDetail.amount = params["txn_debit#{i}"].to_f
 				end
 				wktxnDetail.currency = Setting.plugin_redmine_wktime['wktime_currency']
 				@tempwktxnDetail << wktxnDetail

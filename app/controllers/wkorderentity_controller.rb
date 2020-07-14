@@ -361,11 +361,11 @@ include WkgltransactionHelper
 			totalAmount = @invoice.invoice_items.sum(:original_amount)
 			invoiceAmount = @invoice.invoice_items.where.not(:item_type => 'm').sum(:original_amount)
 			
-			moduleAmtHash = {'inventory' => [nil, totalAmount.round - invoiceAmount.round], getAutoPostModule => [totalAmount.round, invoiceAmount.round]}
+			moduleAmtHash = {'inventory' => [nil, totalAmount.round(2) - invoiceAmount.round(2)], getAutoPostModule => [totalAmount.round(2), invoiceAmount.round(2)]}
 			inverseModuleArr = ['inventory']
 			transAmountArr = getTransAmountArr(moduleAmtHash, inverseModuleArr)
-			if (totalAmount.round - totalAmount) != 0
-				addRoundInvItem(totalAmount)
+			if (totalAmount.round(2) - totalAmount) != 0
+				add.roundInvItem(totalAmount)
 			end
 			if totalAmount > 0 && autoPostGL(getAutoPostModule) && postableInvoice
 				transId = @invoice.gl_transaction.blank? ? nil : @invoice.gl_transaction.id

@@ -1,4 +1,7 @@
 <%= stylesheet_link_tag 'wk-time', :plugin => "redmine_wktime" %>
+<% leadsource = Array.new %> 
+<% leadsource = WkCrmEnumeration.where(:enum_type => "LS").order(enum_type: :asc, position: :asc).pluck(:id, :name) %> 
+<%  leadsourcehash = Hash[*leadsource.flatten] %>
 <div class="autoscroll">
 	<table class="list time-entries">
 		<thead>
@@ -7,6 +10,9 @@
                 <%= sort_header_tag('status', :caption => l(:field_status), class: "lbl-txt-align") %>
 				<%= sort_header_tag('acc_name', :caption => l(:label_account_name), class: "lbl-txt-align") %>
 				<%= sort_header_tag('location_name', :caption => l(:label_location), class: "lbl-txt-align") %>
+				<%= sort_header_tag('lead_source', :caption => l(:label_lead_source), class: "lbl-txt-align") %>
+				<%= sort_header_tag('assigned_to', :caption => l(:field_assigned_to), class: "lbl-txt-align") %>
+				<th class="lbl-txt-align"><%= l(:label_referred_by) %></th>
 				<th class="lbl-txt-align"><%= l(:label_work_phone) %></th>
 				<th class="lbl-txt-align"><%= l(:label_email) %></th>
 				<%= sort_header_tag('created_by_user_id', :caption => l(:field_status_modified_by), class: "lbl-txt-align") %>
@@ -17,11 +23,15 @@
 		<tbody>
 			<% @leadEntries.each do |entry| %>
 				<tr>
-					<td class="lbl-txt-align"><%=h entry.contact.name %></td>
-					<!-- <td class="lbl-txt-align"><%#= link_to entry.contact.last_name, url_for(:controller => controller_name, :action => 'show', :lead_id => entry.id,:address_id => entry.contact.address.blank? ? "" : entry.contact.address.id) %></td> -->
+					<!-- <td class="lbl-txt-align"><%=h entry.contact.name %></td> -->
+					<td class="lbl-txt-align"><%= link_to entry.contact.name, {:controller => controller.controller_name, :action => 'edit', :lead_id => entry.id,:address_id => entry.address.blank? ? "" : entry.address.id}, :title => l(:button_edit) %></td>
 					<td class="lbl-txt-align"><%=h getLeadStatusHash[entry.status] %></td>
 					<td class="lbl-txt-align"><%=h entry.account.blank? ? "" : entry.account.name %></td>
 					<td class="lbl-txt-align"><%=h entry.contact.location_id.blank? ? "" : entry.contact.location.name %></td>
+					
+					<td class="lbl-txt-align"><%=h entry.lead_source_id.blank? ? "" : leadsourcehash[entry.lead_source_id] %></td>
+					<td class="lbl-txt-align"><%=h entry.contact.assigned_user_id.blank? || entry.contact.assigned_user_id == 0 ? "" : entry.contact.assigned_user.name %></td>
+					<td class="lbl-txt-align"><%=h entry.blank?  ? "" : entry.referred_by %></td>
 					<td class="lbl-txt-align"><%=h entry.contact.address.blank? ? "" : entry.contact.address.work_phone %></td>
 					<td class="lbl-txt-align"><%=h entry.contact.address.blank? ? "" : entry.contact.address.email %></td>
 					<td class="lbl-txt-align"><%=h entry.created_by_user.name(:firstname_lastname) %></td>

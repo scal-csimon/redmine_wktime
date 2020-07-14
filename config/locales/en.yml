@@ -448,6 +448,9 @@ en:
   label_sundry_debtors: Sundry Debtors
   label_suspense_ac: Suspense A/c
   label_unsecured_loans: Unsecured Loans
+  label_withholdings: Withholdings
+  label_withholdings_canada: Canada Withholdings
+  label_withholdings_quebec: Quebec Withholdings
   report_profit_loss: Profit & Loss A/c
   label_particulars: Particulars
   label_trading_account: Trading Account
@@ -604,6 +607,7 @@ en:
   label_from_currency: From Currency
   label_to_currency: To Currency
   report_order_to_cash: AR Aging
+  report_Customer_Invoice_per_month: Customer balance
   label_to_currency: To Currency
   label_new_invoice: New Invoice
   label_populate_unbilled_items: Populate Unbilled Items

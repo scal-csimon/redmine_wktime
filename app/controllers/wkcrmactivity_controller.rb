@@ -40,6 +40,7 @@ class WkcrmactivityController < WkcrmController
 
 		actType = session[controller_name].try(:[], :activity_type)
 		relatedTo = session[controller_name].try(:[], :related_to)
+		assigneduserid = session[controller_name].try(:[], :assigned_user_id)
 	   		
 		if !@from.blank? && !@to.blank?
 			crmactivity = crmactivity.where(:start_date => getFromDateTime(@from) .. getToDateTime(@to))
@@ -56,6 +57,11 @@ class WkcrmactivityController < WkcrmController
 		if (!actType.blank?) && (!relatedTo.blank?)
 			crmactivity = crmactivity.where(:activity_type => actType, :parent_type => relatedTo)
 		end
+		
+		if !assigneduserid.blank? && assigneduserid != "0"
+			crmactivity = crmactivity.where("wk_crm_activities.assigned_user_id = ? ", assigneduserid)
+		end
+		
 		formPagination(crmactivity.reorder(sort_clause))
 	end
   
@@ -140,7 +146,7 @@ class WkcrmactivityController < WkcrmController
 	def set_filter_session
 		session[controller_name] = {:from => @from, :to => @to} if session[controller_name].nil?
 		if params[:searchlist] == controller_name
-			filters = [:period_type, :period, :from, :to, :activity_type, :related_to]
+			filters = [:period_type, :period, :from, :to, :activity_type, :related_to, :assigned_user_id]
 			filters.each do |param|
 				if params[param].blank? && session[controller_name].try(:[], param).present?
 					session[controller_name].delete(param)

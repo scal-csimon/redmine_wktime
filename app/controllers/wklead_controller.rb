@@ -9,6 +9,8 @@ class WkleadController < WkcrmController
 		sort_update 'lead_name' => "CONCAT(wk_crm_contacts.first_name, wk_crm_contacts.last_name)",
 			'status' => "#{WkLead.table_name}.status",
 			'location_name' => "L.name",
+			'lead_source' => "#{WkLead.table_name}.lead_source_id",
+			'assigned_to' => "wk_crm_contacts.assigned_user_id",
 			'acc_name' => "A.name",
 			'created_by_user_id' => "CONCAT(U.firstname, U.lastname)",
 			'updated_at' => "#{WkLead.table_name}.updated_at"
@@ -18,6 +20,7 @@ class WkleadController < WkcrmController
 		status = session[controller_name].try(:[], :status)
 		locationId = session[controller_name].try(:[], :location_id)
 		location = WkLocation.where(:is_default => 'true').first
+		assigneduserid = session[controller_name].try(:[], :assigned_user_id)
 		
 		entries = WkLead.joins("LEFT JOIN users AS U ON wk_leads.created_by_user_id = U.id
 			LEFT JOIN wk_accounts AS A on wk_leads.account_id = A.id
@@ -25,9 +28,9 @@ class WkleadController < WkcrmController
 			LEFT JOIN wk_locations AS L on wk_crm_contacts.location_id = L.id")
 
 		if !leadName.blank? && !status.blank?
-		    entries = entries.where(:status => status).joins(:contact).where("LOWER(wk_crm_contacts.first_name) like LOWER(?) OR LOWER(wk_crm_contacts.last_name) like LOWER(?)", "%#{leadName}%", "%#{leadName}%")
+		    entries = entries.where(:status => status).joins(:contact).joins(:account).where("LOWER(wk_crm_contacts.first_name) like LOWER(?) OR LOWER(wk_crm_contacts.last_name) like LOWER(?) OR LOWER(wk_accounts.name) like LOWER(?)", "%#{leadName}%", "%#{leadName}%")
 		elsif !leadName.blank? && status.blank?
-			entries = entries.where.not(:status => 'C').joins(:contact).where("LOWER(wk_crm_contacts.first_name) like LOWER(?) OR LOWER(wk_crm_contacts.last_name) like LOWER(?)", "%#{leadName}%", "%#{leadName}%")
+			entries = entries.where.not(:status => 'C').joins(:contact).joins(:account).where("LOWER(wk_crm_contacts.first_name) like LOWER(?) OR LOWER(wk_crm_contacts.last_name) like LOWER(?) OR LOWER(wk_accounts.name) like LOWER(?)", "%#{leadName}%", "%#{leadName}%","%#{leadName}%")
 		elsif leadName.blank? && !status.blank?
 			entries = entries.where(:status => status).joins(:contact).where("LOWER(wk_crm_contacts.first_name) like LOWER(?) OR LOWER(wk_crm_contacts.last_name) like LOWER(?)", "%#{leadName}%", "%#{leadName}%")
 		else
@@ -38,6 +41,10 @@ class WkleadController < WkcrmController
 			location_id = !locationId.blank? ? locationId.to_i : location.id.to_i
 			entries = entries.where("wk_crm_contacts.location_id = ? ", location_id)
 		end
+		if !assigneduserid.blank? && assigneduserid != "0"
+			entries = entries.where("wk_crm_contacts.assigned_user_id = ? ", assigneduserid)
+		end
+		
 		formPagination(entries.reorder(sort_clause))
 	end
 	  
@@ -49,6 +56,7 @@ class WkleadController < WkcrmController
 	
 	def convert
 		@lead = nil
+		opportunity = nil
 		errorMsg = nil
 		@lead = WkLead.find(params[:lead_id]) unless params[:lead_id].blank?
 		@lead.status = 'C'
@@ -64,22 +72,33 @@ class WkleadController < WkcrmController
 			@lead.save
 			convertToAccount unless @account.blank?
 			convertToContact #(contactType)
+			opportunity = convertToOpportunity
+			
 		end
 		
-		
-		unless @account.blank?
-			flash[:notice] = l(:notice_successful_convert)
-			redirect_to :controller => 'wkcrmaccount',:action => 'edit', :account_id => @account.id
-		else
-			controllerName = hookcontactType.blank? ? 'wkcrmcontact' : hookcontactType[0][1]
+		unless opportunity.blank?
 			if errorMsg[0].blank?
 				flash[:notice] = l(:notice_successful_convert)
+				redirect_to :controller => 'wkopportunity',:action => 'edit', :opp_id => opportunity.id
 			else
 				flash[:error] = errorMsg[0]
-				controllerName = 'wklead'
+				redirect_to :controller => 'wklead', :action => 'edit', :lead_id => @lead.id
 			end
-			
-		    redirect_to :controller => controllerName, :action => 'edit', :contact_id => @contact.id, :lead_id => @lead.id
+
+		else 
+			unless @account.blank?
+				flash[:notice] = l(:notice_successful_convert)
+				redirect_to :controller => 'wkcrmaccount',:action => 'edit', :account_id => @account.id
+			else
+				controllerName = hookcontactType.blank? ? 'wkcrmcontact' : hookcontactType[0][1]
+				if errorMsg[0].blank?
+					flash[:notice] = l(:notice_successful_convert)
+				else
+					flash[:error] = errorMsg[0]
+					controllerName = 'wklead'
+				end
+				redirect_to :controller => controllerName, :action => 'edit', :contact_id => @contact.id, :lead_id => @lead.id
+			end
 		end
 	end
 	
@@ -103,6 +122,53 @@ class WkleadController < WkcrmController
 		@contact.save
 	end
 	
+	
+	def convertToOpportunity
+	
+		oppEntry = nil
+		
+		oppEntry = WkOpportunity.new
+		oppEntry.name = ""
+		oppEntry.updated_by_user_id = User.current.id
+		
+		if @lead.opportunity_amount.blank?
+			oppEntry.amount = 0
+		else
+			oppEntry.amount = @lead.opportunity_amount
+		end
+		oppEntry.assigned_user_id = @contact.assigned_user_id
+		oppEntry.opportunity_type_id = WkCrmEnumeration.where(:enum_type => 'OT', :is_default => true)[0].id
+		oppEntry.sales_stage_id =  WkCrmEnumeration.where(:enum_type => 'SS', :is_default => true)[0].id
+		
+		oppEntry.close_date = Date.today
+		
+		oppEntry.lead_source_id = @lead.lead_source_id
+		
+		unless @contact.blank?
+			oppEntry.parent_id = @contact.id
+			oppEntry.parent_type = "WkCrmContact"
+			oppEntry.name = oppEntry.name + @contact.name
+			oppEntry.description = @contact.description
+		end
+		
+		oppEntry.name = oppEntry.name + " - "
+		
+		unless @account.blank?
+			oppEntry.parent_id = @account.id
+			oppEntry.parent_type = "WkAccount"
+			oppEntry.name = oppEntry.name + @account.name
+			oppEntry.description = @account.description
+		end
+
+		unless oppEntry.valid?
+			errorMsg = oppEntry.errors.full_messages.join("<br>")
+		else
+			oppEntry.save
+		end
+		oppEntry 
+	end
+
+	
 	def copyAddress(source)
 		target = WkAddress.new
 		target = source.dup
@@ -117,7 +183,6 @@ class WkleadController < WkcrmController
 	end
 	  
 	def update
-
 		wkLead = update_without_redirect
 		if @wkContact.valid?
 			if params[:wklead_save_convert] || @isConvert
@@ -171,7 +236,7 @@ class WkleadController < WkcrmController
 	def set_filter_session
 		if params[:searchlist] == controller_name
 			session[controller_name] = Hash.new if session[controller_name].nil?
-			filters = [:lead_name, :status, :location_id]
+			filters = [:lead_name, :status, :location_id, :assigned_user_id ]
 			filters.each do |param|
 				if params[param].blank? && session[controller_name].try(:[], param).present?
 					session[controller_name].delete(param)

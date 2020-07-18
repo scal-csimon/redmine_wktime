@@ -1,6 +1,7 @@
 <h2><%= l(:label_opportunity_plural) %></h2>
 <%= javascript_include_tag 'index', :plugin => "redmine_wktime" %>
 <%= stylesheet_link_tag 'wk-time', :plugin => "redmine_wktime" %>
+<% query_params = request.query_parameters %>
 <script type="text/javascript"> 
    
 	blgaccUrl = '<%=url_for(:controller => "wkcrmaccount", :action => "index", :tab => "wkcrmaccount")%>';
@@ -23,9 +24,21 @@
 		<table>
 			<tr>
 				<th><label for='name' style="float:left;"><%= l(:label_opportunity) + " " + l(:field_name) %></label></th>
-				<td><%= text_field_tag 'oppname', accname.blank? ? "" : accname, :size => 30, :style=> "float: left;" %></td>
+				<td><%= text_field_tag 'oppname', session[controller_name].try(:[], :oppname), :size => 30, :style=> "float: left;" %></td>
+				
 				<th><label style="float:left;padding-left: 10px;"><%= l(:label_account_name) %></label></th>
-				<td><%=h select_tag('account_id', options_for_select(accArr,  :selected => accId.nil? ? accArr : accId), :style=> "float: left;") %></td>
+				<td><%=h select_tag('account_id', options_for_select(accArr,  :selected => session[controller_name].try(:[], :account_id)), :style=> "float: left;") %></td>
+				
+				<th><label style="padding-left: 10px;"><%= l(:field_status) %></label></th>
+					<%  salestageArr = Array.new
+						salestageArr = WkCrmEnumeration.where(:enum_type => "SS", :active => 1).order(enum_type: :asc, position: :asc).pluck(:name,:id)
+						salestageArr.unshift(["",''])
+					%> 	
+					<td><%=h select_tag('status', options_for_select(salestageArr, :selected => session[controller_name].try(:[], :status))) %></td>
+				
+				<th><label for='assigned_user' style="padding-left: 10px;"><%= l(:field_assigned_to) %></label></th>
+				<td><%=h select_tag("assigned_user_id", options_for_select(groupOfUsers, :selected => session[controller_name].try(:[], :assigned_user_id) )) %> </td>
+				
 			</tr>
 		</table>
 	</fieldset>				

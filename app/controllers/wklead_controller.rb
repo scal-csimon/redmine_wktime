@@ -30,10 +30,12 @@ class WkleadController < WkcrmController
 		if !leadName.blank? && !status.blank?
 		    entries = entries.where(:status => status).joins(:contact).joins(:account).where("LOWER(wk_crm_contacts.first_name) like LOWER(?) OR LOWER(wk_crm_contacts.last_name) like LOWER(?) OR LOWER(wk_accounts.name) like LOWER(?)", "%#{leadName}%", "%#{leadName}%")
 		elsif !leadName.blank? && status.blank?
-			entries = entries.where.not(:status => 'C').joins(:contact).joins(:account).where("LOWER(wk_crm_contacts.first_name) like LOWER(?) OR LOWER(wk_crm_contacts.last_name) like LOWER(?) OR LOWER(wk_accounts.name) like LOWER(?)", "%#{leadName}%", "%#{leadName}%","%#{leadName}%")
+			#entries = entries.where.not(:status => 'C').joins(:contact).joins(:account).where("LOWER(wk_crm_contacts.first_name) like LOWER(?) OR LOWER(wk_crm_contacts.last_name) like LOWER(?) OR LOWER(wk_accounts.name) like LOWER(?)", "%#{leadName}%", "%#{leadName}%","%#{leadName}%")
+			entries = entries.where.joins(:contact).joins(:account).where("LOWER(wk_crm_contacts.first_name) like LOWER(?) OR LOWER(wk_crm_contacts.last_name) like LOWER(?) OR LOWER(wk_accounts.name) like LOWER(?)", "%#{leadName}%", "%#{leadName}%","%#{leadName}%")
 		elsif leadName.blank? && !status.blank?
 			entries = entries.where(:status => status).joins(:contact).where("LOWER(wk_crm_contacts.first_name) like LOWER(?) OR LOWER(wk_crm_contacts.last_name) like LOWER(?)", "%#{leadName}%", "%#{leadName}%")
 		else
+			#entries = entries.joins(:contact).where.not(:status => 'C')
 			entries = entries.joins(:contact).where.not(:status => 'C')
 		end
 
@@ -69,11 +71,11 @@ class WkleadController < WkcrmController
 		@contact.contact_type = contactType
 		errorMsg = call_hook(:controller_updated_contact, {:params => params, :leadObj => @lead, :contactObj => @contact})
 		if errorMsg[0].blank?
-			@lead.save
+			
 			convertToAccount unless @account.blank?
 			convertToContact #(contactType)
 			opportunity = convertToOpportunity
-			
+			@lead.save
 		end
 		
 		unless opportunity.blank?
@@ -154,10 +156,12 @@ class WkleadController < WkcrmController
 		oppEntry.name = oppEntry.name + " - "
 		
 		unless @account.blank?
-			oppEntry.parent_id = @account.id
-			oppEntry.parent_type = "WkAccount"
-			oppEntry.name = oppEntry.name + @account.name
-			oppEntry.description = @account.description
+			unless @account.name.blank?
+				oppEntry.parent_id = @account.id
+				oppEntry.parent_type = "WkAccount"
+				oppEntry.name = oppEntry.name + @account.name
+				oppEntry.description = @account.description
+			end
 		end
 
 		unless oppEntry.valid?

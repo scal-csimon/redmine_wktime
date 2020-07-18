@@ -4,7 +4,7 @@ class WkopportunityController < WkcrmController
   include WktimeHelper
 
     def index
-		sort_init 'id', 'asc'
+		sort_init 'sales_stage', 'asc'
 
 		sort_update 'opportunity_name' => "#{WkOpportunity.table_name}.name",
 					'parent_type' => "#{WkOpportunity.table_name}.parent_type",
@@ -41,6 +41,23 @@ class WkopportunityController < WkcrmController
 		end
 		unless filterHash.blank? || filterSql.blank?
 			oppDetails = oppDetails.where(filterSql, filterHash)
+		end
+		
+		if params[:open_closed].blank?
+			oppDetails = oppDetails.where("E.name not like '8%' ")
+		else
+			oppDetails = oppDetails.where("E.name like '8%' ")
+		end
+		
+		assigned_user_id = session[controller_name].try(:[], :assigned_user_id)
+		status = session[controller_name].try(:[], :status)
+
+		if !assigned_user_id.blank? && assigned_user_id != "0"
+			oppDetails = oppDetails.where("U.id = ?", assigned_user_id)
+		end
+		
+		if !status.blank? && status != "0"
+			oppDetails = oppDetails.where("E.id = ?", status)
 		end
 		
 		formPagination(oppDetails.reorder(sort_clause))
@@ -110,7 +127,7 @@ class WkopportunityController < WkcrmController
     def set_filter_session
 		session[controller_name] = {:from => @from, :to => @to} if session[controller_name].nil?
 		if params[:searchlist] == controller_name
-			filters = [:period_type, :oppname, :account_id, :period, :from, :to]
+			filters = [:period_type, :oppname, :account_id, :period, :from, :to, :assigned_user_id, :open_closed, :status]
 			filters.each do |param|
 				if params[param].blank? && session[controller_name].try(:[], param).present?
 					session[controller_name].delete(param)

@@ -172,12 +172,15 @@ include WkdocumentHelper
 		elsif relatedType == "WkCrmContact"
 			hookType = call_hook(:additional_contact_type)
 			if hookType.blank? || !isContactType
-				relatedId = WkCrmContact.includes(:lead).where(:account_id => nil, :contact_id => nil).where(wk_leads: { status: ['C', nil] }).where(:contact_type => type).order(:first_name, :last_name)
+				#relatedId = WkCrmContact.includes(:lead).where(:account_id => nil, :contact_id => nil).where(wk_leads: { status: ['C', nil] }).where(:contact_type => type).order(:first_name, :last_name)
+				relatedId = WkCrmContact.includes(:lead).where(:account_id => nil, :contact_id => nil).where(wk_leads: { status: ['C', nil] }).order(:first_name, :last_name)
 			else
-				relatedId = WkCrmContact.includes(:lead).where(:account_id => nil, :contact_id => nil).where(wk_leads: { status: ['C', nil] }).where("wk_crm_contacts.contact_type = '#{type}' or wk_crm_contacts.contact_type = '#{hookType}'").order(:first_name, :last_name)
+				#relatedId = WkCrmContact.includes(:lead).where(:account_id => nil, :contact_id => nil).where(wk_leads: { status: ['C', nil] }).where("wk_crm_contacts.contact_type = '#{type}' or wk_crm_contacts.contact_type = '#{hookType}'").order(:first_name, :last_name)
+				relatedId = WkCrmContact.includes(:lead).where(:account_id => nil, :contact_id => nil).where(wk_leads: { status: ['C', nil] }).where("wk_crm_contacts.contact_type = '#{hookType}'").order(:first_name, :last_name)
 			end
 		else
-			relatedId = WkAccount.where(:account_type => type).order(:name)
+			#relatedId = WkAccount.where(:account_type => type).order(:name)
+			relatedId = WkAccount.order(:name)
 		end
 		if !relatedId.blank?
 			relatedId.each do | entry|				

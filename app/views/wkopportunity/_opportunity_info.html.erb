@@ -20,7 +20,7 @@
 			<td align="left" style=""><%=h text_field_tag("opp_name", (!@oppEditEntry.blank? ? @oppEditEntry[0].name : ""), :style => "width:95%") %></td>			
 			
 			<th align="left" style=""><%= l(:label_expected_date_to_close_project) %></th>
-			<td align="left" style=""><%= date_field_tag('expected_close_date',  (!@oppEditEntry.blank? && !@oppEditEntry[0].close_date.blank? ? @oppEditEntry[0].close_date : Date.today), {:id => 'expected_close_date', :size => 12, :style => "width:95%;"}) + calendar_for('expected_close_date') %></td>
+			<td align="left" style=""><%= date_field_tag('expected_close_date',  (!@oppEditEntry.blank? && !@oppEditEntry[0].close_date.blank? ? @oppEditEntry[0].close_date.to_date()  : Date.today), {:id => 'expected_close_date', :size => 12, :style => "width:95%;"}) + calendar_for('expected_close_date') %></td>
 		</tr>
 		<%  selectedSSId = @oppEditEntry.blank? ? nil : @oppEditEntry[0].sales_stage_id %>
 		<%  selectedOTId = @oppEditEntry.blank? ? nil : @oppEditEntry[0].opportunity_type_id %>

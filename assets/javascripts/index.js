@@ -388,7 +388,6 @@ function actRelatedParentChanged()
 					type: 'get',
 					data: {related_type: relatedType},
 					success: function(data){
-						debugger;
 						if(typeof relatedparentdd.val() !== 'undefined' && relatedparentdd.val() ){
 							relatedparentlink.attr("href", data.format( relatedparentdd.val()));
 							relatedparentlink.show(); 

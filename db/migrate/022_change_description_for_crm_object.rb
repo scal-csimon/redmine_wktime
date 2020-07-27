@@ -13,6 +13,7 @@ class ChangeDescriptionForCrmObject < ActiveRecord::Migration[5.2]
       t.change :description, :text, limit: 1000
     end
 
+
     change_table :wk_opportunities   do |t|
       t.change :description, :text, limit: 1000
     end

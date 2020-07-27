@@ -68,7 +68,7 @@
 		
 		<tr>
 		<th align="left" ><%= l(:field_description) %></th>
-		<td colspan="4" align="left" style=""><%= text_area_tag 'opp_description', (!@oppEditEntry.blank? && !@oppEditEntry[0].description.blank? ? @oppEditEntry[0].description : ""), :maxlength => 255, :style => "height:80px; " %></td>		
+		<td colspan="4" align="left" style=""><%= text_area_tag 'opp_description', (!@oppEditEntry.blank? && !@oppEditEntry[0].description.blank? ? @oppEditEntry[0].description : ""), :maxlength => 1000, :style => "height:80px; " %></td>		
 		
 		</tr>
 		
@@ -78,7 +78,7 @@
 
 
 <script type="text/javascript"> 
-debugger;
+
 	actRelatedParentChanged();
 
 	function relatedTypeChanged(){

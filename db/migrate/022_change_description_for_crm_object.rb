@@ -13,12 +13,12 @@ class ChangeDescriptionForCrmObject < ActiveRecord::Migration[5.2]
       t.change :description, :text, limit: 1000
     end
 
-    change_table :wk_opportunities   do |t|
+    change_table :wk_opportunities do |t|
       t.change :description, :text, limit: 1000
     end
 
-
   end
+  
   def down
     change_table :wk_crm_activities do |t|
       t.change :description, :string
@@ -28,11 +28,11 @@ class ChangeDescriptionForCrmObject < ActiveRecord::Migration[5.2]
       t.change :description, :string
     end
 
-    change_table :wk_crm_contacts  do |t|
+    change_table :wk_crm_contacts do |t|
       t.change :description, :string
     end
 
-    change_table :wk_opportunities  do |t|
+    change_table :wk_opportunities do |t|
       t.change :description, :string
     end
 

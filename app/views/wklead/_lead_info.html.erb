@@ -112,7 +112,7 @@
 		<% end %>
 		<tr>
 			<th align="left"><%= l(:field_description) %></th>
-			<td align="left" style="padding-left:40px;"><%=h text_area_tag("description",accountDescription, :maxlength => 255, :size => 20) %> </td>
+			<td align="left" style="padding-left:40px;"><%=h text_area_tag("description",accountDescription, :maxlength => 1000, :size => 20) %> </td>
 		</tr>
 	</table>
 </fieldset>

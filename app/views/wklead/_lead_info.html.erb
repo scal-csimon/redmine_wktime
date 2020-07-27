@@ -1,6 +1,7 @@
 <%= javascript_include_tag 'index', :plugin => "redmine_wktime" %>
 <script type="text/javascript"> 
 	actRelatedUrl="<%= "#{url_for(:controller => "wkcrm", :action => 'getActRelatedIds', :additionalContactType => controller.additionalContactType)}" %>";
+	relatedUrlForLink = "<%= "#{url_for(:controller => "wkcrm", :action => 'getActRelatedUrl')}" %>";
 </script>
 <fieldset class="box tabular">
 	<legend><%=l(:label_content_information, isAccount ? controller.getAccountLbl : l(:label_lead))%></legend>
@@ -64,11 +65,12 @@
 			<% if isContact %>	
 				<tr>
 					<th align="left" ><%= l(:label_related_to) %></th>
-					<td align="left" style="padding-left:40px;"><%=h select_tag("related_to", options_for_select(relHash.invert, :selected => (!contactObj.blank? ? relateTo : (params[:parentType].blank? ? "" : params[:parentType]))), :onchange => "actRelatedDd(#{User.current.id}, false, true, '#{accountType}', '#{contactType}', false)", :style => "width:20%;") %>
+					<td align="left" style="padding-left:40px;"><%=h select_tag("related_to", options_for_select(relHash.invert, :selected => (!contactObj.blank? ? relateTo : (params[:parentType].blank? ? "" : params[:parentType]))), :onchange => "relatedTypeChanged()", :style => "width:20%;") %>
 					
-					<%=h select_tag("related_parent", options_for_select(accArr, :selected => (!contactObj.blank? ? parentId : (params[:parentId].blank? ? "" : params[:parentId]))), :style => "width:30%;") %>
+					<%=h select_tag("related_parent", options_for_select(accArr, :selected => (!contactObj.blank? ? parentId : (params[:parentId].blank? ? "" : params[:parentId]))),:onchange => "actRelatedParentChanged()", :style => "width:30%;") %>
 					<b><%= l(:label_as) %></b>
 					<%=h select_tag('relationship_id', options_for_select(options_for_enum_select('CR', (!contactObj.blank? ? contactObj.relationship_id : nil), true)), :style => "width:30%;") %>
+					<%=h link_to image_tag('edit.png'),"",:id=>"related_parent_link", :title => l(:button_edit) %>
 					</td> 
 					
 				</tr>
@@ -114,3 +116,15 @@
 		</tr>
 	</table>
 </fieldset>
+
+<script type="text/javascript"> 
+
+	actRelatedParentChanged();
+
+	function relatedTypeChanged(){
+		actRelatedDd( "<%= "#{User.current.id}" %>" , false, false, 'A', 'C', false);
+		actRelatedParentChanged();
+	}
+
+
+</script>

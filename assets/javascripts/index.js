@@ -15,7 +15,6 @@ String.prototype.format = function() {
     // The string containing the format items (e.g. "{0}")
     // will and always has to be the first argument.
     var theString = this;
-    debugger;
     // start with the second argument (i = 1)
     for (var i = 0; i < arguments.length; i++) {
         // "gm" = RegEx options for Global search (more than one instance)
@@ -388,7 +387,13 @@ function actRelatedParentChanged()
 					url: relatedUrlForLink,
 					type: 'get',
 					data: {related_type: relatedType},
-					success: function(data){ relatedparentlink.attr("href", data.format( relatedparentdd.val())); relatedparentlink.show(); },
+					success: function(data){
+						debugger;
+						if(typeof relatedparentdd.val() !== 'undefined' && relatedparentdd.val() ){
+							relatedparentlink.attr("href", data.format( relatedparentdd.val()));
+							relatedparentlink.show(); 
+						}
+					},
 					beforeSend: function(){ $this.addClass('ajax-loading'); },
 					complete: function(){  $this.removeClass('ajax-loading'); }	,
 					error:function(err){  debugger; }

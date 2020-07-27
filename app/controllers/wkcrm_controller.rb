@@ -43,6 +43,25 @@ class WkcrmController < WkbaseController
 		respond_to do |format|
 			format.text  { render :plain => relatedArr }
 		end
+	end
+	
+	def getActRelatedUrl
+		relatedUrl = nil
+		if params[:related_type] == "WkOpportunity"
+			relatedUrl = url_for(:controller => "wkopportunity", :action => 'edit', :tab => 'wkopportunity', :opp_id => "{0}")
+		elsif params[:related_type] == "WkLead"
+			relatedUrl = url_for(:controller => "wklead", :action => 'edit', :tab => 'wklead', :lead_id => "{0}")
+		elsif params[:related_type] == "WkCrmContact"
+			relatedUrl =  url_for(:controller => "wkcrmcontact", :action => 'edit', :tab => 'wkcrmcontact', :contact_id => "{0}")
+		elsif params[:related_type] != "0"
+			relatedUrl =  url_for(:controller => "wkcrmaccount", :action => 'edit', :tab => 'wkcrmaccount', :account_id => "{0}")
+		end
+		
+		respond_to do |format|
+			format.text  { render :js => relatedUrl }
+		end
+
+
     end
 	
 	def check_perm_and_redirect

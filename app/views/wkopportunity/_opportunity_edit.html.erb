@@ -1,8 +1,10 @@
 <%= javascript_include_tag 'index', :plugin => "redmine_wktime" %>
 <script type="text/javascript"> 
 	actRelatedUrl="<%= "#{url_for(:controller => "wkcrm", :action => 'getActRelatedIds', :additionalContactType => controller.additionalContactType)}" %>";
-</script>
+	relatedUrlForLink = "<%= "#{url_for(:controller => "wkcrm", :action => 'getActRelatedUrl')}" %>";
 
+
+</script>
 <%= form_tag({:controller => 'wkopportunity', :action => 'update'}, :method => :get, :id => 'query_form') do %>
 <%=h hidden_field_tag('opp_id', (!@oppEditEntry.blank? ? @oppEditEntry[0].id : "") ) %>
 

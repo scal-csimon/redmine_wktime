@@ -11,6 +11,23 @@ var userList = new Array();
 var rSubEmailUrl = "";
 var rAppEmailUrl = "";
 
+String.prototype.format = function() {
+    // The string containing the format items (e.g. "{0}")
+    // will and always has to be the first argument.
+    var theString = this;
+    debugger;
+    // start with the second argument (i = 1)
+    for (var i = 0; i < arguments.length; i++) {
+        // "gm" = RegEx options for Global search (more than one instance)
+        // and for Multiline search
+        var regEx = new RegExp("\\{0\\}|%7B0%7D", "gm");
+        theString = theString.replace(regEx, arguments[i]);
+    }
+    
+    return theString;
+}
+
+
 $(document).ready(function() {
 	$( "#reminder-email-dlg" ).dialog({
 		autoOpen: false,
@@ -344,14 +361,42 @@ function actRelatedDd(uid, loadProjects, needBlankOption, actType, contactType, 
 	var relatedparentdd = document.getElementById("related_parent");
 	userid = uid;
 	var $this = $(this);
-	$.ajax({
-	url: actRelatedUrl,
-	type: 'get',
-	data: {related_type: relatedType, account_type: actType, contact_type: contactType},
-	success: function(data){ updateUserDD(data, relatedparentdd, userid, needBlankOption, false, "");},
-	beforeSend: function(){ $this.addClass('ajax-loading'); },
-	complete: function(){ if(loadProjects) { accProjChanged(uid, 'related_parent', true, true) }if(loadPayment){submitFiletrForm();} $this.removeClass('ajax-loading'); }	   
-	});
+	$.ajax(
+		{
+			url: actRelatedUrl,
+			type: 'get',
+			data: {related_type: relatedType, account_type: actType, contact_type: contactType},
+			success: function(data){ updateUserDD(data, relatedparentdd, userid, needBlankOption, false, "");},
+			beforeSend: function(){ $this.addClass('ajax-loading'); },
+			complete: function(){ if(loadProjects) { accProjChanged(uid, 'related_parent', true, true) }if(loadPayment){submitFiletrForm();} $this.removeClass('ajax-loading'); }	   
+		}
+	);
+}
+
+function actRelatedParentChanged()
+{
+	var relatedTo = $("#related_to");
+	var relatedType = relatedTo.val();
+	var relatedparentdd = $("#related_parent");
+	var relatedparentlink = $("#related_parent_link");
+	var $this = $(this);
+	if(typeof relatedparentlink !== 'undefined') {
+		relatedparentlink.hide()
+		if(typeof relatedUrlForLink !== 'undefined'){
+			$.ajax(
+				{
+					url: relatedUrlForLink,
+					type: 'get',
+					data: {related_type: relatedType},
+					success: function(data){ relatedparentlink.attr("href", data.format( relatedparentdd.val())); relatedparentlink.show(); },
+					beforeSend: function(){ $this.addClass('ajax-loading'); },
+					complete: function(){  $this.removeClass('ajax-loading'); }	,
+					error:function(err){  debugger; }
+				}
+			);
+		}
+	}
+	
 }
 
 function parentChanged(uid)

@@ -18,7 +18,6 @@ class ChangeDescriptionForCrmObject < ActiveRecord::Migration[5.2]
     end
 
 
-
   end
   def down
     change_table :wk_crm_activities do |t|

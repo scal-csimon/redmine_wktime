@@ -145,6 +145,7 @@ class WkleadController < WkcrmController
 		oppEntry.close_date = Date.today
 		
 		oppEntry.lead_source_id = @lead.lead_source_id
+		oppEntry.originating_lead_id = @lead.id
 		
 		unless @contact.blank?
 			oppEntry.parent_id = @contact.id

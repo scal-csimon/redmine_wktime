@@ -20,7 +20,9 @@ class WkopportunityController < WkcrmController
 		accId = session[controller_name].try(:[], :account_id)
 
 		oppDetails = WkOpportunity.joins("LEFT JOIN (SELECT id, firstname, lastname FROM users) AS U ON wk_opportunities.assigned_user_id = U.id
-			LEFT JOIN wk_crm_enumerations AS E on wk_opportunities.sales_stage_id = E.id")
+			LEFT JOIN wk_crm_enumerations AS E on wk_opportunities.sales_stage_id = E.id
+			LEFT JOIN wk_accounts AS A on wk_opportunities.parent_id = A.id and parent_type = 'WkAccount' 
+			LEFT JOIN wk_crm_contacts AS C on wk_opportunities.parent_id = C.id and parent_type = 'WkCrmContact' ")
 
 		filterSql = ""
 		filterHash = Hash.new
@@ -30,7 +32,18 @@ class WkopportunityController < WkcrmController
 		end
 		unless oppName.blank?
 			filterSql = filterSql + " AND" unless filterSql.blank?
+			filterSql = filterSql + "("
 			filterSql = filterSql + " LOWER(wk_opportunities.name) like LOWER(:name)"
+			
+			#search for account name
+			filterSql = filterSql + " OR LOWER(A.name) like LOWER(:name)"
+
+			#search for contact name
+			filterSql = filterSql + " OR LOWER(C.first_name) like LOWER(:name) OR LOWER(C.last_name) like LOWER(:name)"
+
+
+			filterSql = filterSql + ")"
+
 			filterHash[:name] = "%#{oppName}%"
 		end
 		unless accId.blank?

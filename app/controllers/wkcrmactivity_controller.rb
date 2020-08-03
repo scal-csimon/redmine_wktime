@@ -31,6 +31,7 @@ class WkcrmactivityController < WkcrmController
 					'start_date' => "#{WkCrmActivity.table_name}.start_date",
 					'end_date' => "#{WkCrmActivity.table_name}.end_date",
 					'assigned_user_id' => "CONCAT(U.firstname, U.lastname)",
+					'created_at' => "#{WkCrmActivity.table_name}.created_at",
 					'updated_at' => "#{WkCrmActivity.table_name}.updated_at"
 
 	    set_filter_session
@@ -146,7 +147,7 @@ class WkcrmactivityController < WkcrmController
 	def set_filter_session
 		session[controller_name] = {:from => @from, :to => @to} if session[controller_name].nil?
 		if params[:searchlist] == controller_name
-			filters = [:period_type, :period, :from, :to, :activity_type, :related_to, :assigned_user_id]
+			filters = [:period_type, :period, :from, :to, :activity_type, :related_to, :assigned_user_id, :created_at, :updated_at]
 			filters.each do |param|
 				if params[param].blank? && session[controller_name].try(:[], param).present?
 					session[controller_name].delete(param)

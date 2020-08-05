@@ -14,8 +14,8 @@
         wk_crm_enumerations.position,
         count(wk_opportunities.id) as count
     ')
-    .group(:sale_stage_group,:position)
-    .order('position');
+    .group(:sale_stage_group)
+    .order('sale_stage_group');
 
     
     opportunities_hash = Opportunity_Ammount_by_Sale_Stage.map {|c| [c.sale_stage_group,c.count] }.to_h ;

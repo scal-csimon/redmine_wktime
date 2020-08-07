@@ -771,159 +771,159 @@ fr:
   label_new_depreciation: Nouvelle dépréciation
   report_asset: Rapport sur les actifs
   label_last_depreciation_on: Dernière dépréciation le
-  label_loggable_asset: Loggable Asset
+  label_loggable_asset: Actif enregistrable
   label_dep_auto_apply: Appliquer l'amortissement automatiquement
-  label_done: Done
-  label_log: Log
-  label_owner: Owner
-  error_transfer_qty_greater_than_zero: Transfer Quantity Should be greater than zero
-  error_avail_qty_great_than_trans_qty: Transfer Quantity should be less than or equal to Available Quantity
-  label_per: per
-  label_depreciation_freq_warning: "Note: Any change to the depreciation frequency will delete last applied depreciations"
-  label_scheduling: Scheduling
-  label_schedule_preference: Schedule Preference
-  label_shift: Shift
+  label_done: Terminé
+  label_log: Journal
+  label_owner: Propriétaire
+  error_transfer_qty_greater_than_zero: La quantité de transfert doit être supérieure à zéro
+  error_avail_qty_great_than_trans_qty: La quantité de transfert doit être inférieure ou égale à la quantité disponible
+  label_per: par
+  label_depreciation_freq_warning: "Remarque: toute modification de la fréquence d'amortissement supprimera les derniers amortissements appliqués"
+  label_scheduling: Planification
+  label_schedule_preference: Préférence de planification
+  label_shift: Décalage
   label_role_adjusted: Rôles
-  label_new_shift: New Shift
-  label_required_staff: Required Staff
-  label_count: Count
-  label_department: Department
-  label_day_off: Day Off
-  label_schedule_details: Schedule Details
-  label_shift_scheduling: Shift Scheduling
-  label_shift_scheduling: Shift Scheduling
-  field_is_schedulable: Schedulable
-  field_gender: Gender
-  field_id1: Custom id1
-  field_id2: Custom id2
-  field_id3: Custom id3
-  field_join_date: Join date
-  field_birth_date: Birth date
-  field_termination_date: Termination date
-  field_bank_name: Bank name
-  field_account_number: Bank account number
-  field_bank_code: Bank code
-  field_tax: Tax ID
+  label_new_shift: New Décalage
+  label_required_staff: Personnel requis
+  label_count: Compter
+  label_department: Département
+  label_day_off: Jour de congé
+  label_schedule_details: Détails d'horaire
+  label_shift_scheduling: Planification d'horaire
+  label_shift_scheduling: Planification d'horaire
+  field_is_schedulable: Cédulable
+  field_gender: Le sexe
+  field_id1: Personnalisé id1
+  field_id2: Personnalisé id2
+  field_id3: Personnalisé id3
+  field_join_date: Date d'inscription
+  field_birth_date: Date de naissance
+  field_termination_date: Date de résiliation
+  field_bank_name: Nom de banque
+  field_account_number: Numéro de compte bancaire
+  field_bank_code: Code bancaire
+  field_tax: Numéro d'identification fiscale
   field_ss: SS id
-  field_custom_number1: Custom number1
-  field_custom_number2: Custom number2
-  field_custom_date1: Custom date1
-  field_custom_date2: Custom date2
-  field_billing_rate: Billing rate
-  field_billing_currency: Billing currency
+  field_custom_number1: Personnalisé number1
+  field_custom_number2: Personnalisé number2
+  field_custom_date1: Personnalisé date1
+  field_custom_date2: Personnalisé date2
+  field_billing_rate: Taux de facturation
+  field_billing_currency: Devise de facturation
   field_location: Location
-  field_department: Department
-  label_public_holiday: Public Holiday
-  label_schedule_on_weekend: Schedule on Weekend / Holiday
-  label_holiday: Holiday
-  label_day_off_per_frequency: Day off per frequency
-  label_schedule_shifts: Schedule Shifts
-  warning_apply_depreciation: Are you sure want to apply depreciation for the period
-  warning_schedule_shifts: Are you sure want to schedule shifts for the period
-  label_work: Work
-  field_shift: Shift
-  label_setting_preference: Allow user schedule preference
-  label_auto_scheduling: Auto Shift Scheduling
+  field_department: Département
+  label_public_holiday: Jour férié
+  label_schedule_on_weekend: Programmé en fin de semaine / Vacance
+  label_holiday: Vacance
+  label_day_off_per_frequency: Jour de congé par fréquence
+  label_schedule_shifts: Horaire des quarts de travail
+  warning_apply_depreciation: Voulez-vous vraiment appliquer l'amortissement pour la période
+  warning_schedule_shifts: Voulez-vous vraiment planifier des horaires de travail pour la période
+  label_work: Travail
+  field_shift: Quart de travail
+  label_setting_preference: Autoriser la préférence de planification de l'utilisateur
+  label_auto_scheduling: Planification automatique des horaires de travail
 
 
-  label_shift_and_scheduling: Shift Scheduling
+  label_shift_and_scheduling: Planification des horaires de travail
   label_auto_approve_with_te: Approbation automatique Temps & Dépense
-  label_credit_with_ledger: Credit Ledger
-  label_debit_with_ledger: Debit Ledger
-  label_txn_payment_with_credit_with_ledger: Payment Credit Ledger
-  label_txn_payment_with_debit_with_ledger: Payment Debit Ledger
+  label_credit_with_ledger: Registre de crédit
+  label_debit_with_ledger: Registre des débits
+  label_txn_payment_with_credit_with_ledger: Registre des crédits de paiement
+  label_txn_payment_with_debit_with_ledger: Registre des débits de paiement
 
-  gender_hash_male: Male
-  gender_hash_female: Female
-  gender_hash_others: Others
+  gender_hash_male: Homme
+  gender_hash_female: Femme
+  gender_hash_others: Autres
 
-  nonsub_mail_message_content: You are receiving this notification for timesheet non submission
-  submission_ack_message_content: I Acknowledge that the hours entered are accurate to the best of my knowledge
-  all_users_for_select: All Users
-  label_expected_date_to_close_project: Expected Fermer Date
-  text_edit_activity: Edit Activity
-  label_number_shortcut: "No"
+  nonsub_mail_message_content: Vous recevez cette notification pour non soumission de feuille de temps
+  submission_ack_message_content: Je reconnais que les heures saisies sont exactes au meilleur de ma connaissance
+  all_users_for_select: Tous les utilisateurs
+  label_expected_date_to_close_project: Date de fermeture prévue
+  text_edit_activity: Modifier l'activité
+  label_number_shortcut: "Non"
   label_account_category: Catégorie d'entreprise
 
-  VIEW INVENTORY: View inventory
-  DELETE INVENTORY: Delete inventory
-  SCHEDULES SHIFT: Schedules shift
-  EDIT SHIFT SCHEDULES: Edit shift schedules
-  EDIT SURVEY: Edit survey
-  BASIC CRM PRIVILEGE: Basic CRM privilege
-  ADMIN CRM PRIVILEGE: Admin CRM privilege
-  MANAGE BILLING: Manage Billing
-  BASIC ACCOUNTING PRIVILEGE: Basic Accounting privilege
-  ADMIN ACCOUNTING PRIVILEGE: Admin Accounting privilege
-  BASIC PURCHASING PRIVILEGE: Basic Purchasing privilege
-  ADMIN PURCHASING PRIVILEGE: Admin Purchasing privilege
-  ADMIN ERPMINE : Admin ERPmine
-  VIEW REPORT: View Report
+  VIEW INVENTORY: Voir l'inventaire
+  DELETE INVENTORY: Supprimer l'inventaire
+  SCHEDULES SHIFT: Programmation des horaires de travail
+  EDIT SHIFT SCHEDULES: Modifier les horaires de travail
+  EDIT SURVEY: Modifier l'enquête
+  BASIC CRM PRIVILEGE: Privilège Basique du CRM
+  ADMIN CRM PRIVILEGE: Privilège Administrateur du CRM
+  MANAGE BILLING: Gérer la facturation
+  BASIC ACCOUNTING PRIVILEGE: Privilège de comptabilité de base
+  ADMIN ACCOUNTING PRIVILEGE: Privilège de comptabilité administrateur
+  BASIC PURCHASING PRIVILEGE: Privilège d'achat de base
+  ADMIN PURCHASING PRIVILEGE: Privilège d'achat administrateur
+  ADMIN ERPMINE : Administrateur ERPmine
+  VIEW REPORT: Voir le rapport
 
-  label_active_on: On
-  label_active_off: Off
+  label_active_on: Ouvert
+  label_active_off: Éteindre
 
-  label_confirmation_salary_text: Are you sure want to generate salary on
+  label_confirmation_salary_text: Voulez-vous vraiment générer un salaire sur
 
-  label_period_end_confirmation: Are you sure want to run this process
-  label_period_end_note: 'Please: Note This will run the process for the previous month from the chosen date'
-  label_chose_process_date: 'Chose process date:'
-  label_title_end_process: Run Period End Process
-  label_select_date_text: Please select the date
+  label_period_end_confirmation: Voulez-vous vraiment exécuter ce processus
+  label_period_end_note: 's'il vous plaît: Notez bien que cela exécutera le processus pour le mois précédent à partir de la date choisie'
+  label_chose_process_date: 'Choisissez la date du processus:'
+  label_title_end_process: Exécuter le processus de fin de période
+  label_select_date_text: Veuillez sélectionner la date
 
-  label_report_type: Rapport Type
+  label_report_type: Type de rapport
 
-  label_new_asset: New Asset
-  label_new_asset_item: New Asset
-  label_edit_asset_item: Edit Asset
-  label_additional_info: Additional Information
-  label_as: As
-  label_new_component: New Component
-  label_components: Components
-  label_sheet_view: Sheet view
-  label_issue_view: Issue view
-  label_spent_for: Spent For
+  label_new_asset: Nouvel actif
+  label_new_asset_item: Nouvel actif
+  label_edit_asset_item: Modifier l'actif
+  label_additional_info: Information additionnelle
+  label_as: Comme
+  label_new_component: Nouveau composant
+  label_components: Composants
+  label_sheet_view: Vue feuille
+  label_issue_view: Vue du problème
+  label_spent_for: Dépensé pour
   label_availability: Available
-  label_in_use: In Use
-  label_additional_assignee: Additional Assignee
+  label_in_use: Utilisé
+  label_additional_assignee: Cessionnaire supplémentaire
   label_relationship: Contact Relationship
-  warning_select_project: Please select a project
-  warn_billable_project_not_configured: Billable projects not configured for %{name}
-  field_rate: Rate
-  field_rate_per: Per
-  label_invoice_generation_month: Invoice generation month
-  label_edit_component: Edit Component
-  # Supervisor lables
-  label_ftte_supervisor: "Supervisor"
-  label_my_direct_reports: "My direct reports"
-  label_my_reports: "My reports"
-  label_ftte_supervisor_edit_log: "Allow supervisor to edit time logs"
-  label_ftte_override_spent_time_report: "Override built-in spent time reports"
-  label_ftte_supervisor_based_approval: "Use supervisor based approval system "
-  label_ftte_view_only_own_spent_time: "View only own spent time"
+  warning_select_project: Veuillez sélectionner un projet
+  warn_billable_project_not_configured: Projets facturables non configurés pour %{name}
+  field_rate: Taux
+  field_rate_per: Par
+  label_invoice_generation_month: Mois de génération de facture
+  label_edit_component: Modifier le composant
+  # Étiquettes de superviseur
+  label_ftte_supervisor: "Superviseur"
+  label_my_direct_reports: "Mes subordonnés directs"
+  label_my_reports: "Mes rapports"
+  label_ftte_supervisor_edit_log: "Autoriser le superviseur à modifier les journaux de temps"
+  label_ftte_override_spent_time_report: "Remplacer les rapports de temps passé intégrés"
+  label_ftte_supervisor_based_approval: "Utiliser le système d'approbation basé sur le superviseur "
+  label_ftte_view_only_own_spent_time: "Afficher uniquement le temps passé"
   label_additional_details: Additional Details
 
-  #Dashboards
-  label_dashboards: Dashboards
-  label_clock_in_users_over_time: Clock in users over time
-  label_no_of_users: No of users
-  label_expense_for_issues: Expense for issues
-  label_total_expense_of_issues: Total expense of the issues
-  label_lead_generation_vs_conversion: Lead generation vs conversion
-  label_created_lead: Created lead
-  label_converted_lead: Converted lead
-  label_invoice_vs_payment_per_month: Invoice total vs Payment total
-  label_total_invoice: Invoice
-  label_total_payment: Payment
-  label_assets_per_month: Assets per month
-  label_total_assets_per_month: Assets
-  label_profit_loss_per_month: Profit and loss per month
-  label_total_income: Income
-  label_total_expense: Expense
-  label_months: Months
-  label_amount : Amount
+  #Supervisor lables
+  label_dashboards: Tableaux de bord
+  label_clock_in_users_over_time: Horloge des utilisateurs au fil du temps
+  label_no_of_users: Non d'utilisateurs
+  label_expense_for_issues: Frais pour problèmes
+  label_total_expense_of_issues: Dépenses totales des émissions
+  label_lead_generation_vs_conversion: Génération de leads vs conversion
+  label_created_lead: Client potentiel créé
+  label_converted_lead: Client potentiel converti
+  label_invoice_vs_payment_per_month: Total de la facture vs total du paiement
+  label_total_invoice: Facture d'achat
+  label_total_payment: Paiement
+  label_assets_per_month: Actifs par mois
+  label_total_assets_per_month: Atouts
+  label_profit_loss_per_month: Profit et perte par mois
+  label_total_income: Revenu
+  label_total_expense: Dépense
+  label_months: Mois
+  label_amount : Montant
   label_no_of_leads: Nb de prospects
-  label_no_of_employees: No of Employees
+  label_no_of_employees: No des employés
 
   #Survey
   label_survey: Survey

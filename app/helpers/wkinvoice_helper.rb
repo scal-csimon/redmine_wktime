@@ -244,7 +244,7 @@ include WkpayrollHelper
 				lastIssueId = entry.issue_id
 				if isUserBilling
 					if accountProject.itemized_bill
-						description = entry.issue.blank? ? entry.project.name : (isAccountBilling(accountProject) ? entry.project.name + ' - ' + entry.issue.subject : entry.issue.subject) + " - " + entry.user.membership(entry.project).roles[0].name
+						description = entry.issue.blank? ? entry.project.name : (isAccountBilling(accountProject) ? entry.issue.subject : entry.issue.subject) + " - " + entry.user.membership(entry.project).roles[0].name
 						quantity = sumEntry[[entry.issue_id, entry.user_id]]
 						# amount = rateHash['rate'] * quantity
 						# invItem = updateInvoiceItem(invItem, accountProject.project_id, description, rateHash['rate'], quantity, rateHash['currency'], 'i', amount, nil, nil, nil) unless isCreate

@@ -22,10 +22,31 @@ class WkSpentFor < ActiveRecord::Base
   belongs_to :invoice_item , :class_name => 'WkInvoiceItem'
   attr_accessor :spent_date_hr, :spent_date_min, :spent_for_key
   
-  safe_attributes 'spent_id', 'spent_type', 'spent_for_id', 'spent_for_type'
+  safe_attributes 'spent_id', 'spent_type', 'spent_for_id', 'spent_for_type', 'end_on', 's_longitude', 's_latitude',
+   'e_longitude', 'e_latitude', 'clock_action'
   
   scope :time_entries,  -> { where(:spent_type => "TimeEntry") }
   scope :material_entries,  -> { where(:spent_type => "WkMaterialEntry") }
   scope :unbilled_entries,  -> { where(:invoice_item => nil) }
-  
+
+  scope :getIssueLog, -> (id=nil, spent_type=nil) {
+    joins("LEFT JOIN time_entries AS TE ON TE.id = wk_spent_fors.spent_id AND spent_type = 'TimeEntry' AND TE.user_id = #{User.current.id}")
+    .joins("LEFT JOIN wk_material_entries AS M ON M.id = wk_spent_fors.spent_id AND spent_type = 'WkMaterialEntry' AND M.user_id = #{User.current.id}")
+    .joins("LEFT JOIN issues AS I ON I.id = TE.issue_id OR I.id = M.issue_id")
+    .joins("LEFT JOIN projects AS P ON P.id = I.project_id")
+    .joins("LEFT JOIN trackers AS T ON I.tracker_id = T.id")
+    .where("(M.id IS NOT NULL OR TE.id IS NOT NULL) AND  " + (id.present? ? " spent_id = #{id}" : "wk_spent_fors.clock_action = 'S'") +
+      (spent_type.present? ? " AND wk_spent_fors.spent_type = '#{getSpentType(spent_type)}'" : ""))
+    .select("wk_spent_fors.*, P.name AS project_name, I.subject, I.id AS issue_id, T.name AS tracker_name")
+    .order("spent_on_time DESC")
+  }
+
+  def self.getSpentType(spent_type)
+    case spent_type
+    when 'T'
+      return "TimeEntry"
+    when 'A'
+      return "WkMaterialEntry"
+    end
+  end
 end

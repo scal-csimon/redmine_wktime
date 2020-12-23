@@ -1,5 +1,5 @@
 # ERPmine - ERP for service industry
-# Copyright (C) 2011-2016  Adhi software pvt ltd
+# Copyright (C) 2011-2020  Adhi software pvt ltd
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -16,16 +16,18 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 class WkaccountController < WkcrmController
+
 	include WkaccountprojectHelper
     before_action :require_login
 
 	def index
-		sort_init 'id', 'asc'
+		sort_init 'updated_at', 'desc'
 
 		sort_update 'acc_name' => "#{WkAccount.table_name}.name",
 					'country' => "A.country",
 					'city' => "A.city",
-					'location_name' => "L.name"
+					'location_name' => "L.name",
+					'updated_at' => "#{WkAccount.table_name}.updated_at"
 					
 		set_filter_session
 		locationId = session[controller_name].try(:[], :location_id)
@@ -47,6 +49,12 @@ class WkaccountController < WkcrmController
 		end
 		entries = entries.order(:name)
 		formPagination(entries.reorder(sort_clause))
+		respond_to do |format|
+			format.html {        
+			  render :layout => !request.xhr?
+			}
+			format.api
+		end
 	end
 	
 	def formPagination(entries)
@@ -80,35 +88,35 @@ class WkaccountController < WkcrmController
 	
 		  @accountEntry = WkAccount.find(params[:account_id])
 		end
+		respond_to do |format|
+			format.html {        
+			  render :layout => !request.xhr?
+			}
+			format.api
+		end
     end	
 	
 	def update
-		errorMsg = nil
-		if params[:account_id].blank? || params[:account_id].to_i == 0
-			wkaccount = WkAccount.new
-		else
-		    wkaccount = WkAccount.find(params[:account_id].to_i)
-		end
-		wkaccount.name = params[:account_name]
-		wkaccount.account_type = getAccountType
-		wkaccount.account_category = params[:account_category]
-		wkaccount.description = params[:description]
-		wkaccount.account_billing = params[:account_billing].blank? ? 0 : params[:account_billing]
-		wkaccount.location_id = params[:location_id] if params[:location_id] != "0"
-		unless wkaccount.valid? 		
-			errorMsg = errorMsg.blank? ? wkaccount.errors.full_messages.join("<br>") : wkaccount.errors.full_messages.join("<br>") + "<br/>" + errorMsg
-		end
-		if errorMsg.nil?
-			addrId = updateAddress
-			unless addrId.blank?
-				wkaccount.address_id = addrId
-			end			
-			wkaccount.save
-		    redirect_to :controller => controller_name,:action => 'index' , :tab => controller_name
-		    flash[:notice] = l(:notice_successful_update)
-		else
-			flash[:error] = errorMsg #wkaccount.errors.full_messages.join("<br>")
-		    redirect_to :controller => controller_name,:action => 'edit', :account_id => wkaccount.id
+		wkaccount = accountSave
+		errorMsg = wkaccount.errors.full_messages.join("<br>")
+		respond_to do |format|
+			format.html {
+				if errorMsg.blank?
+					redirect_to :controller => controller_name,:action => 'index' , :tab => controller_name 
+					flash[:notice] = l(:notice_successful_update)
+				else
+					flash[:error] = errorMsg
+					redirect_to :controller => controller_name, :action => 'edit', :account_id => wkaccount.id
+				end
+			}
+			format.api{
+				if errorMsg.blank?
+					render :plain => errorMsg, :layout => nil
+				else
+					@error_messages = errorMsg.split('\n')	
+					render :template => 'common/error_messages.api', :status => :unprocessable_entity, :layout => nil
+				end
+			}
 		end
 	end
 	
@@ -128,7 +136,7 @@ class WkaccountController < WkcrmController
 	end
 
 	def set_filter_session
-		if params[:searchlist] == controller_name
+		if params[:searchlist] == controller_name || api_request?
 			session[controller_name] = Hash.new if session[controller_name].nil?
 			filters = [:location_id, :accountname]
 			filters.each do |param|

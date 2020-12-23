@@ -1,5 +1,7 @@
   get 'wktime/index', :to => 'wktime#index'
 
+	get 'wktime/get_issue_loggers', :to => 'wktime#get_issue_loggers'
+
   get 'wktime/getissues', :to => 'wktime#getissues'
 
   get 'wktime/getactivities', :to => 'wktime#getactivities'
@@ -20,8 +22,6 @@
   
   match 'wktime/edit', :to => 'wktime#edit', :via => [:get, :post]
 
-  get 'wktime/new', :to => 'wktime#new'
-			  
   post 'wktime/update', :to => 'wktime#update'
 			  
   delete 'wktime/destroy', :to => 'wktime#destroy'
@@ -36,7 +36,9 @@
   
   post 'wktime/sendApprReminderEmail', :to => 'wktime#sendApprReminderEmail'
   
-  get 'wktime/testapi', :to => 'wktime#testapi' 
+  get 'wktime/testapi', :to => 'wktime#testapi'
+
+  get 'wktime/getProjects', :to => 'wktime#getProjects'
   
   #get 'wktime/updateAttendance', :to => 'wktime#updateAttendance'
 match 'updateAttendance', :controller => 'wktime', :action => 'updateAttendance', :via => [:get]  
@@ -45,7 +47,9 @@ match 'updateAttendance', :controller => 'wktime', :action => 'updateAttendance'
   
   # For Supervisor feature
 	get 'wktime/getMyReportUsers', :to => 'wktime#getMyReportUsers'
-  
+
+	get 'wktime/getAPIUsers', to: 'wktime#getAPIUsers'
+
   #For Weekly expenses
   
   get 'wkexpense/index', :to => 'wkexpense#index'
@@ -90,7 +94,9 @@ match 'updateAttendance', :controller => 'wktime', :action => 'updateAttendance'
   
   delete 'wkexpense/deleteEntries', :to => 'wkexpense#deleteEntries' 
   
-  get 'wkexpense/time_rpt', :to => 'wkexpense#time_rpt' 
+  get 'wkexpense/time_rpt', :to => 'wkexpense#time_rpt'
+	
+	get 'wkexpense/getCurrency', :to => 'wkexpense#getCurrency' 
  
   resources :projects do	
 	resources :wk_expense_entries, :controller => 'wkexpense' do
@@ -133,12 +139,12 @@ match 'updateAttendance', :controller => 'wktime', :action => 'updateAttendance'
   
   post 'wkattendance/save_bulk_edit', :to => 'wkattendance#save_bulk_edit'
   
+  get 'wkattendance/getClockHours', :to => 'wkattendance#getClockHours'
+  
   #For Report   
   get 'wkreport/index', :to => 'wkreport#index'
    
-  # get 'wkreport/reportattn', :to => 'wkreport#reportattn'  
-  
-  match 'updateClockInOut', :controller => 'wkattendance', :action => 'updateClockInOut', :via => [:get]
+  # get 'wkreport/reportattn', :to => 'wkreport#reportattn'
   
   get 'wkreport/getGroupMembers', :to => 'wkreport#getGroupMembers'
   
@@ -253,12 +259,14 @@ match 'updateAttendance', :controller => 'wktime', :action => 'updateAttendance'
 	
 	# get 'wkreport/balance_sheet', :to => 'wkreport#balance_sheet'
 	
-	get 'wkbase/updateClockInOut', :to => 'wkbase#updateClockInOut'
+	post 'wkbase/updateClockInOut', :to => 'wkbase#updateClockInOut'
 	
 	# For CRM
 	
 	get 'wkcrm/index', :to => 'wkcrm#index'
 	
+	get 'wkcrm/getCrmUsers', to: 'wkcrm#getCrmUsers'
+
 	get 'wklead/index', :to => 'wklead#index'
 	
 	post 'wklead/index', :to => 'wklead#index'
@@ -286,6 +294,7 @@ match 'updateAttendance', :controller => 'wktime', :action => 'updateAttendance'
 	get 'wkcrm/getActRelatedUrl', :to => 'wkcrm#getActRelatedUrl'
 
 	get 'wkcrmactivity/update', :to => 'wkcrmactivity#update'
+
 	
 	delete 'wkcrmactivity/destroy', :to => 'wkcrmactivity#destroy'
 	
@@ -311,6 +320,8 @@ match 'updateAttendance', :controller => 'wktime', :action => 'updateAttendance'
 	
 	delete 'wkcrmenumeration/destroy', :to => 'wkcrmenumeration#destroy' 
 	
+	get 'wkcrmenumeration/getCrmEnumerations', to: 'wkcrmenumeration#getCrmEnumerations'
+
 	get 'wkreport/report', :to => 'wkreport#report'
 	
 	# get 'wkreport/sales_act_rpt', :to => 'wkreport#sales_act_rpt'
@@ -487,7 +498,11 @@ match 'updateAttendance', :controller => 'wktime', :action => 'updateAttendance'
     
 	get 'wkasset/transfer', :to => 'wkasset#transfer'
 	
-	post 'wkasset/updateTransfer', :to => 'wkasset#updateTransfer'	
+	post 'wkasset/updateTransfer', :to => 'wkasset#updateTransfer'
+	 
+	get 'wkasset/dispose_asset', to: 'wkasset#dispose_asset'
+
+	post 'wkasset/updateDisposedAsset', to: 'wkasset#updateDisposedAsset'	
 	
 	get 'wkbrand/index', :to => 'wkbrand#index'
 	
@@ -531,6 +546,8 @@ match 'updateAttendance', :controller => 'wktime', :action => 'updateAttendance'
 	
 	delete 'wklocation/destroy', :to => 'wklocation#destroy'
 	
+	get 'wklocation/getlocations', to: 'wklocation#getlocations'
+
 	get 'wkunitofmeasurement/update', :to => 'wkunitofmeasurement#update'
 	
 	get 'wkshipment/getSupplierInvoices', :to => 'wkshipment#getSupplierInvoices'
@@ -574,12 +591,18 @@ match 'updateAttendance', :controller => 'wktime', :action => 'updateAttendance'
 	get 'wkpublicholiday/index', :to => 'wkpublicholiday#index'
 	
 	post 'wkpublicholiday/update', :to => 'wkpublicholiday#update'
-	
+
 	get 'wklogmaterial/loadSpentType', :to => 'wklogmaterial#loadSpentType'
-	
+
+	get 'wklogmaterial/index', to: 'wklogmaterial#index'
+
+	get 'wklogmaterial/spent_log_edit', :to => 'wklogmaterial#spent_log_edit'
+
 	get 'wkdashboard/index', :to => 'wkdashboard#index'
 	
 	get 'wkdashboard/graph', :to => 'wkdashboard#graph'
+	
+	get 'wkdashboard/getGraphs', to: 'wkdashboard#getGraphs'
 	
 	get 'wksurvey/survey', :to => 'wksurvey#survey'
 	
@@ -633,6 +656,10 @@ match 'updateAttendance', :controller => 'wktime', :action => 'updateAttendance'
 
 	get 'wkdocument/destroy', :to => 'wkdocument#destroy'
 
+	get 'wkdocument/view', :to => 'wkdocument#view'
+
+  get 'wkdocument/download/:id/:filename', :to => 'wkdocument#download', :id => /\d+/, :filename => /.*/, :as => 'download_location_attachment'
+
 	post 'wksurvey/close_current_response', :to => 'wksurvey#close_current_response'
 
 	get 'wksurvey/print_survey_result', :to => 'wksurvey#print_survey_result'
@@ -644,3 +671,33 @@ match 'updateAttendance', :controller => 'wktime', :action => 'updateAttendance'
 	post 'wkpayroll/income_tax', :to => 'wkpayroll#income_tax'
 
 	get 'wkpayroll/getRecursiveComp', :to => 'wkpayroll#getRecursiveComp'
+
+	get 'wklocation/getlocations', :to => 'wklocation#getlocations'
+
+	get 'wkcrmenumeration/getCrmEnumerations', :to => 'wkcrmenumeration#getCrmEnumerations'
+
+	get 'wklead/getuserGrp', :to => 'wklead#getuserGrp'
+
+	get 'wkinvoice/getInvProj', :to => 'wkinvoice#getInvProj'
+
+	get 'wkbase/getUserPermissions', :to => 'wkbase#getUserPermissions'
+
+	get 'wkbase/saveIssueTimeLog', :to => 'wkbase#saveIssueTimeLog'
+
+	get 'wksurvey/print_survey', :to => 'wksurvey#print_survey'
+
+	post 'wklogmaterial/create', to: 'wklogmaterial#create'
+
+	post 'wklogmaterial/update', to: 'wklogmaterial#update'
+    
+	get 'wknotification/index', :to => 'wknotification#index'
+	
+	post 'wknotification/update', :to => 'wknotification#update'
+
+	get 'wkinvoice/export', :to => 'wkinvoice#export'
+
+	get 'wkquote/export', :to => 'wkquote#export'
+
+	get 'wkpurchaseorder/export', :to => 'wkpurchaseorder#export'
+
+	get 'wksupplierinvoice/export', :to => 'wksupplierinvoice#export'

@@ -1,3 +1,20 @@
+# ERPmine - ERP for service industry
+# Copyright (C) 2011-2020  Adhi software pvt ltd
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 module WksurveyHelper
 
     include WktimeHelper
@@ -69,16 +86,17 @@ module WksurveyHelper
         surveys
     end
 
-    def get_survey_with_userGroup(survey_id)
+    def get_survey_with_userGroup(survey_id, checkSurveyPerm = true)
         if checkEditSurveyPermission && survey_id.blank?
             survey = WkSurvey.all
         else
-            survey = WkSurvey.joins("INNER JOIN(
-                SELECT wk_surveys.id, count(wk_surveys.id) FROM wk_surveys
+            users = convertUsersIntoString()
+            survey = WkSurvey.joins("INNER JOIN (
+                SELECT wk_surveys.id, count(wk_surveys.id) count FROM wk_surveys
                 LEFT JOIN groups_users ON groups_users.group_id = wk_surveys.group_id
                 LEFT JOIN users ON users.id = groups_users.user_id 
-                WHERE wk_surveys.status IN ('O', 'C') AND (groups_users.user_id = #{(User.current.id).to_s}
-                    OR wk_surveys.group_id IS NULL )
+                WHERE wk_surveys.status IN ('O', 'C') AND (groups_users.user_id = #{User.current.id} OR wk_surveys.group_id IS NULL)
+                    OR (#{booleanFormat(checkSurveyPerm)} = #{booleanFormat(true)} AND is_review = #{booleanFormat(true)} AND users.id IN (#{users}))
                 GROUP BY wk_surveys.id
                 ) AS S ON S.id = wk_surveys.id")
         end
@@ -205,5 +223,24 @@ module WksurveyHelper
         closedResponses = WkSurveyResponse.getClosedResp(survey_id)
         groupedNames = closedResponses.pluck(:group_name).compact
     end
-  
+
+    def getReportingUsers
+        getReportUsers(User.current.id).pluck(:id)
+    end
+
+    def convertUsersIntoString
+        users = getReportingUsers << User.current.id
+        users = users.join(',')
+    end
+
+    def validateTrendingChart(survey_id=params[:survey_id], question_id=params[:question_id])
+      showTrendingChart = true
+			choices = WkSurvey.getSurveyChoices(survey_id, question_id)
+      choices.each {|choice| showTrendingChart = false if !is_numeric? choice.name}
+      showTrendingChart
+    end
+
+    def is_numeric?(obj) 
+        obj.to_s.match(/\A[+-]?\d+?(\.\d+)?\Z/) != nil
+    end
 end

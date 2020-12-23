@@ -1,9 +1,8 @@
-<h2><%= l(:label_opportunity_plural) %></h2>
+<%= title l(:label_opportunity_plural) %>
 <%= javascript_include_tag 'index', :plugin => "redmine_wktime" %>
 <%= stylesheet_link_tag 'wk-time', :plugin => "redmine_wktime" %>
 <% query_params = request.query_parameters %>
 <script type="text/javascript"> 
-   
 	blgaccUrl = '<%=url_for(:controller => "wkcrmaccount", :action => "index", :tab => "wkcrmaccount")%>';
 	crmleadsUrl = '<%=url_for(:controller => "wklead", :action => "index", :tab => "wklead")%>';
     crmopportunityUrl = '<%=url_for(:controller => "wkopportunity", :action => "index", :tab => "wkopportunity")%>';
@@ -13,13 +12,16 @@
 </script>
 <%= render_tabs time_expense_tabs %>
 
+<div class="wk-contextual">
+		<%= link_to l(:label_new_item_adjusted, l(:label_opportunity)), url_for(:controller => controller_name, :action => 'edit'), :class => 'icon icon-add' %>
+</div>
 <%= hidden_field_tag 'back_url', url_for(:controller => params[:controller], :action => params[:action]) %>
 <%= form_tag({:controller => "wkopportunity", :action => 'index', :tab => "wkopportunity"}, :method => :post, :id => 'query_form') do %>
 	<%=h hidden_field_tag('tab', "wkopportunity") %>
 	<%= hidden_field_tag "searchlist", "wkopportunity" %>
 	<%	accname = session[:wkopportunity].try(:[], :oppname) %>
 	<%	accId = session[:wkopportunity].try(:[], :account_id) %>
-	<%	accArr = options_for_wktime_account(true, 'A') %>
+	<%	accArr = options_for_wktime_account(true, 'A', controller.additionalAccountType) %>
 	<fieldset>
 		<table>
 			<tr>
@@ -41,10 +43,7 @@
 				
 			</tr>
 		</table>
-	</fieldset>				
-	<div class="wk-contextual">
-			<%= link_to l(:label_new_item_adjusted, l(:label_opportunity)), url_for(:controller => controller_name, :action => 'edit'), :class => 'icon icon-time-add' %>
-	</div>
+	</fieldset>
 	<p><%= render :partial => 'wkopportunity/date_range' %></p>
 <% end %>
 <%= render :partial => 'wkopportunity/opportunity_list', locals: { opportunities: @opportunity} %>

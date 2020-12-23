@@ -1,12 +1,30 @@
+# ERPmine - ERP for service industry
+# Copyright (C) 2011-2020  Adhi software pvt ltd
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 class WkleadController < WkcrmController
   unloadable
   include WktimeHelper
   include WkleadHelper
+  accept_api_auth :index, :edit, :getuserGrp, :update
 
 	def index
-		sort_init 'id', 'asc'
+		sort_init 'updated_at', 'desc'
 		
-		sort_update 'lead_name' => "CONCAT(wk_crm_contacts.first_name, wk_crm_contacts.last_name)",
+		sort_update 'lead_name' => "CONCAT(C.first_name, C.last_name)",
 			'status' => "#{WkLead.table_name}.status",
 			'location_name' => "L.name",
 			'lead_source' => "#{WkLead.table_name}.lead_source_id",
@@ -25,15 +43,17 @@ class WkleadController < WkcrmController
 		entries = WkLead.joins("LEFT JOIN users AS U ON wk_leads.created_by_user_id = U.id
 			LEFT JOIN wk_accounts AS A on wk_leads.account_id = A.id
 			LEFT JOIN wk_crm_contacts AS C on wk_leads.contact_id = C.id
-			LEFT JOIN wk_locations AS L on wk_crm_contacts.location_id = L.id")
+			LEFT JOIN wk_locations AS L on C.location_id = L.id")
 
 		if !leadName.blank? && !status.blank?
+
 		    entries = entries.where(:status => status).joins(:contact).joins(:account).where("LOWER(wk_crm_contacts.first_name) like LOWER(?) OR LOWER(wk_crm_contacts.last_name) like LOWER(?) OR LOWER(wk_accounts.name) like LOWER(?)", "%#{leadName}%", "%#{leadName}%")
 		elsif !leadName.blank? && status.blank?
 			#entries = entries.where.not(:status => 'C').joins(:contact).joins(:account).where("LOWER(wk_crm_contacts.first_name) like LOWER(?) OR LOWER(wk_crm_contacts.last_name) like LOWER(?) OR LOWER(wk_accounts.name) like LOWER(?)", "%#{leadName}%", "%#{leadName}%","%#{leadName}%")
 			entries = entries.where.joins(:contact).joins(:account).where("LOWER(wk_crm_contacts.first_name) like LOWER(?) OR LOWER(wk_crm_contacts.last_name) like LOWER(?) OR LOWER(wk_accounts.name) like LOWER(?)", "%#{leadName}%", "%#{leadName}%","%#{leadName}%")
+
 		elsif leadName.blank? && !status.blank?
-			entries = entries.where(:status => status).joins(:contact).where("LOWER(wk_crm_contacts.first_name) like LOWER(?) OR LOWER(wk_crm_contacts.last_name) like LOWER(?)", "%#{leadName}%", "%#{leadName}%")
+			entries = entries.where(:status => status).joins(:contact).where("LOWER(C.first_name) like LOWER(?) OR LOWER(C.last_name) like LOWER(?)", "%#{leadName}%", "%#{leadName}%")
 		else
 			#entries = entries.joins(:contact).where.not(:status => 'C')
 			entries = entries.joins(:contact).where.not(:status => 'C')
@@ -41,13 +61,19 @@ class WkleadController < WkcrmController
 
 		if (!locationId.blank? || !location.blank?) && locationId != "0"
 			location_id = !locationId.blank? ? locationId.to_i : location.id.to_i
-			entries = entries.where("wk_crm_contacts.location_id = ? ", location_id)
+			entries = entries.where("C.location_id = ? ", location_id)
 		end
 		if !assigneduserid.blank? && assigneduserid != "0"
 			entries = entries.where("wk_crm_contacts.assigned_user_id = ? ", assigneduserid)
 		end
 		
 		formPagination(entries.reorder(sort_clause))
+		respond_to do |format|
+			format.html {        
+			  render :layout => !request.xhr?
+			}
+			format.api
+		end
 	end
 	  
 	def show
@@ -180,6 +206,7 @@ class WkleadController < WkcrmController
 		target.save
 		target
 	end
+
 	  
 	def edit
 		@lead = nil
@@ -189,6 +216,8 @@ class WkleadController < WkcrmController
 	  
 	def update
 		wkLead = update_without_redirect
+		respond_to do |format|
+			format.html {
 		if @wkContact.valid?
 			if params[:wklead_save_convert] || @isConvert
 				redirect_to :action => 'convert', :lead_id => wkLead.id
@@ -200,6 +229,17 @@ class WkleadController < WkcrmController
 			flash[:error] = @wkContact.errors.full_messages.join("<br>")
 		    redirect_to :controller => 'wklead',:action => 'edit', :lead_id => wkLead.id
 		end 
+	}
+	format.api{
+		errorMsg = @wkContact.errors.full_messages.join("<br>")
+		if errorMsg.blank?
+			render :plain => errorMsg, :layout => nil
+		else		
+			@error_messages = errorMsg.split('\n')	
+			render :template => 'common/error_messages.api', :status => :unprocessable_entity, :layout => nil
+		end
+	}
+end
 	end
   
     def destroy
@@ -211,7 +251,7 @@ class WkleadController < WkcrmController
 	def formPagination(entries)
 		@entry_count = entries.count
 		setLimitAndOffset()
-		@leadEntries = entries.order(updated_at: :desc).limit(@limit).offset(@offset)
+		@leadEntries = entries.limit(@limit).offset(@offset)
 	end
   
     def setLimitAndOffset		
@@ -239,7 +279,7 @@ class WkleadController < WkcrmController
 	end
 
 	def set_filter_session
-		if params[:searchlist] == controller_name
+		if params[:searchlist] == controller_name || api_request?
 			session[controller_name] = Hash.new if session[controller_name].nil?
 			filters = [:lead_name, :status, :location_id, :assigned_user_id ]
 			filters.each do |param|
@@ -250,6 +290,13 @@ class WkleadController < WkcrmController
 				end
 			end
 		end
-    end
+	end
+
+	def getuserGrp
+		users = groupOfUsers
+		grpUser = []
+		grpUser = users.map { |usr| { value: usr[1], label: usr[0] }}
+		render json: grpUser
+	end
 
 end

@@ -80,6 +80,10 @@ include WkaccountingHelper
 			end
 			transAmountArr.each_with_index do |amtHash, index|
 				detailType = index == 0 ? 'c' :'d'
+				if amtHash.key?("detail_type")
+					detailType = amtHash["detail_type"]
+					amtHash.delete("detail_type")
+				end
 				amtHash.each do |ledgerId, amount|
 					orgAmount = amount if isDiffCur
 					unless exchangeRate.blank?
@@ -218,7 +222,7 @@ include WkaccountingHelper
 						end
 						selectedLedgerEntries = entry.transaction_details.includes(:ledger).where(:wk_gl_transaction_details => { :detail_type => detailType }).order(:detail_type).pluck('wk_ledgers.id, wk_gl_transaction_details.amount, wk_gl_transaction_details.detail_type, wk_ledgers.name, wk_ledgers.ledger_type')
 						otherDetailTypeEntries = entry.transaction_details.includes(:ledger).where.not(:wk_gl_transaction_details => { :detail_type => detailType }).order(:detail_type).pluck('wk_ledgers.id, wk_gl_transaction_details.amount, wk_gl_transaction_details.detail_type, wk_ledgers.name, wk_ledgers.ledger_type')
-						partLedgerName = selectedLedgerEntries[0][3]
+						partLedgerName = selectedLedgerEntries.length > 0 ? selectedLedgerEntries[0][3] : nil
 						#trAmount = selectedLedgerEntries[0][1]
 					end
 					dbAmount = nil

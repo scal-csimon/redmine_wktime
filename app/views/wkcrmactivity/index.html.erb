@@ -1,4 +1,4 @@
-<h2><%= l(:label_activity_plural) %></h2>
+<%= title l(:label_activity_plural) %>
 <%= javascript_include_tag 'index', :plugin => "redmine_wktime" %>
 <%= stylesheet_link_tag 'wk-time', :plugin => "redmine_wktime" %>
 <script type="text/javascript"> 
@@ -21,11 +21,16 @@
 <% relatedArr << relatedHash.to_a %> 
 <%  relatedArrhash = Hash[*relatedArr.flatten].invert %>
 
+<div class="wk-contextual">
+	<%= link_to l(:label_new_item_adjusted, l(:field_activity)), url_for(:controller => controller_name, :action => 'edit'), :class => 'icon icon-add' %>
+</div>
+<fieldset>
 <%= form_tag({:controller => "wkcrmactivity", :action => 'index', :tab => "wkcrmactivity"}, :method => :get, :id => 'query_form') do %>
 	<%= hidden_field_tag "searchlist", controller_name %>
 	<%=h hidden_field_tag('tab', "wkcrmactivity") %>
 	<%	actType =session[controller_name].try(:[], :activity_type)
-		actRelated = session[controller_name].try(:[], :related_to) %>
+		actRelated = session[controller_name].try(:[], :related_to)
+		show_on_map = session[controller_name].try(:[], :show_on_map) %>
 		<table>
 			<th align="left" ><%= l(:label_activity_type) %>:</th>
 			<td  align="left"><%=h select_tag("activity_type", options_for_select(actTypehash, :selected => !actType.blank? ? actType : ""), :style => "width:190px;") %></td>
@@ -35,9 +40,15 @@
 			<td align="left"><%=h select_tag("assigned_user_id", options_for_select(groupOfUsers, :selected => session[controller_name].try(:[], :assigned_user_id) ))%></td>
 		</table>
 	<%= render :partial => 'wkcrmactivity/date_range' %>
+  <%= link_to_function l(:button_apply), '$("#query_form").submit(); return false;', :class => 'icon icon-checked' %>
+  <%= link_to l(:button_clear), {:controller => controller_name, :action => action_name, :tab => 'wkcrmactivity'}, :class => 'icon icon-reload' %> 
+  <% if isChecked('crm_save_geo_location') %>
+    <label style="padding-left:5px">
+      <%= check_box_tag('show_on_map', true, show_on_map || false, onclick: '$("#query_form").submit(); return false;') %>
+      <%= l(:label_show_on_map) %>
+    </label>
+  <% end %>
 <% end %>
-<div class="wk-contextual">
-	<%= link_to l(:label_new_item_adjusted, l(:field_activity)), url_for(:controller => controller_name, :action => 'edit'), :class => 'icon icon-time-add' %>
-</div>
+</fieldset>
 <%= render partial: "activity_list", locals: { activities:  @activity } %>
 <span class="pagination"><%= pagination_links_full @entry_pages, @entry_count %></span>

@@ -1,13 +1,39 @@
 <% wktime_helper = Object.new.extend(WktimeHelper) %>
+<% if wktime_helper.isChecked('te_save_geo_location') ||
+		wktime_helper.isChecked('att_save_geo_location') ||
+		wktime_helper.isChecked('crm_save_geo_location') %>
+			<%= javascript_include_tag 'geo_location', :plugin => "redmine_wktime" %>
+<% end %>
 <% 
    lastAttnEntries = wktime_helper.findLastAttnEntry(true)
    if !lastAttnEntries.blank? 
   	  @lastAttnEntry = lastAttnEntries[0]
-   end   
+   end
 %>
-<% if (!Setting.plugin_redmine_wktime['wktime_enable_clock_in_out'].blank? &&
-		Setting.plugin_redmine_wktime['wktime_enable_clock_in_out'].to_i == 1) && (!Setting.plugin_redmine_wktime['wktime_enable_attendance_module'].blank? && Setting.plugin_redmine_wktime['wktime_enable_attendance_module'].to_i == 1 ) %>	
-	<%	if !@lastAttnEntry.blank?
+<%= javascript_include_tag 'timer', :plugin => "redmine_wktime" %>
+<style>
+	#clockINOUT, #issueLog {
+		float: right;
+		display: flex;
+		flex-direction: row-reverse;
+		cursor: pointer;
+		margin-left: 10px;
+	}
+	#appendlabel, #issue-time, #issue-tracker{
+		padding-top: 5px;
+		padding-left: 4px;
+		font-size: 13px;
+	}
+	#startdiv, #enddiv{
+		float: right;
+	}
+	#issueLog .drdn-items > * {
+		color: #555 !important;
+	}
+	#issueLog .drdn-content {width:280px;}
+</style>
+<% if wktime_helper.isChecked("wktime_enable_clock_in_out") && wktime_helper.isChecked("wktime_enable_attendance_module") && User.current.logged? && wktime_helper.checkViewPermission %>	
+	<% if !@lastAttnEntry.blank?
 			if(@lastAttnEntry.end_time.blank? && @lastAttnEntry.start_time > 24.hour.ago)
 				hideStart = true
 				hideEnd = false
@@ -23,27 +49,93 @@
 			hideEnd = true
 		end
 		 
-		imgname = "#{imglabel}" == "start" ? "clockin1.jpg" : "clockout1.jpg" %>	
-	<% totalhours = (wktime_helper.totalhours)*3600 %>
-	<% totalhours = (hideStart ? ( !remaininghr.blank? ? remaininghr.round(0)+totalhours : totalhours) : totalhours ) %>
-	<% totalhours1 = Time.at(totalhours).utc.strftime("%H:%M:%S") %>
-	<% host_with_subdir = wktime_helper.getHostAndDir(request) %>
-	<%=h hidden_field_tag('clockinout_url',  "#{url_for(:controller => 'wkbase', :action => 'updateClockInOut', :host => host_with_subdir, :only_path => true)}" )  %>
-	<% if User.current.logged? && wktime_helper.checkViewPermission %>
-		<div>
-		<label id="appendlabel" style="float: right; display: inline; position: relative; z-index: 9999; text-shadow: -1px -1px 0 #628DB6, 1px -1px 0 #628DB6, -1px 1px 0 #628DB6, 1px 1px 0 #628DB6;"><br/><%= l(:label_total_hours) %><br/>
-		   &nbsp;<%= totalhours1 %></label>  
-			
-		<div id="startdiv" style="float: right; display: inline; position: relative; z-index: 9999;"  >
-		<% strt_image_tg = image_tag("widgetclockin.png", :id => 'clockin' , :plugin => "redmine_wktime", :title => l(:label_clock_in), :style => hideStart ? "display:none;" : "display:block;" ) %>
-		<%= link_to strt_image_tg, "javascript:signAttendance('start');", {:id => "clock_start"}  %>		
-		</div>
-		
-		<div id="enddiv" style="float: right; display: inline; position: relative; z-index: 9999;" >
-		<% end_image_tg = image_tag("widgetclockout.png", :id => 'clockout', :plugin => "redmine_wktime", :title => l(:label_clock_out),:style => hideEnd ? "display:none;" : "display:block;" ) %>
-		<%= link_to end_image_tg, "javascript:signAttendance('end');", {:id => "clock_end"}  %>		
-		</div>
-		</div>
-		<div style="clear: both;"></div>
+		imgname = "#{imglabel}" == "start" ? "clockin1.jpg" : "clockout1.jpg"
+		totalhours = (wktime_helper.totalhours)*3600
+		totalhours = (hideStart ? ( !remaininghr.blank? ? remaininghr.round(0)+totalhours : totalhours) : totalhours )
+		totalhours1 = Time.at(totalhours).utc.strftime("%H:%M")
+		host_with_subdir = wktime_helper.getHostAndDir(request)
+	%>
+	<%= javascript_tag do %>
+		$(function(){
+			<% if @lastAttnEntry && @lastAttnEntry.end_time.blank? && @lastAttnEntry.start_time > 24.hour.ago %>
+				startTimer('start');
+			<% end %>
+			$("#clockINOUT").click(function(){
+				if($('#clockout').is(':visible')){
+					startTimer('start');
+				}else{
+					startTimer('pause');
+				}
+			});
+		});
+		function startTimer(str){
+			$("#appendlabel").timer({
+					action: str,
+					seconds: <%= totalhours.to_i %>
+			});
+		}
 	<% end %>
-	<% end %>	
+	<%=h hidden_field_tag('clockinout_url',  "#{url_for(:controller => 'wkbase', :action => 'updateClockInOut', :host => host_with_subdir, :only_path => true)}" )  %>
+
+	<div style="clear: both;"></div>
+	<div id="clockINOUT">
+		<span id="appendlabel"><%= totalhours1 %></span>
+		<div id="startdiv">
+			<%= image_tag("widgetclockin.png", :id => 'clockin' , :plugin => "redmine_wktime", :style => hideStart ? "display:none;" : "display:block;" ) %>		
+		</div>
+		<div id="enddiv">
+			<%= image_tag("widgetclockout.png", :id => 'clockout', :plugin => "redmine_wktime", :style => hideEnd ? "display:none;" : "display:block;") %>		
+		</div>
+
+	</div>
+	<div style="clear: both;"></div>
+<% end %>
+
+<!-- Issue Time Tracker-->
+<% if wktime_helper.isChecked("label_enable_issue_logger") && User.current.logged? && wktime_helper.checkViewPermission
+		lastIssueLog = WkSpentFor.getIssueLog.first
+		imgName = lastIssueLog.present? ? "finish" : "start"
+		image = image_tag(imgName + '.png', plugin: "redmine_wktime", style: "height: 25px")
+		trigger = content_tag("span", image, id: 'issueImg', class: "drdn-trigger")
+		issueURL = "/wktime/get_issue_loggers?autocomplete=true"
+		issue = text_field_tag("issue", "", id: "issues-quick-search", class: "autocomplete", data: {automcomplete_url: issueURL},
+			autocomplete: "off", placeholder: "Select Issue")
+		content = content_tag("div", content_tag("div", issue, class: "quick-search") +
+			content_tag("div", nil, class: "drdn-items issues"), class: "drdn-content", id: "issue-content", style: "width: max-content;" )
+%>
+	<%= hidden_field_tag('g_clock_action', lastIssueLog ? lastIssueLog.clock_action : nil ) %>
+	<%= hidden_field_tag('projectID', @project ? @project.id : "" ) %>
+	<%= content_tag("div", trigger + content, id: "issueLog", class: "drdn") %>
+	<div style="clear: both;"></div>
+<% end %>
+
+<% if controller_name == "timelog" && action_name == "index" %>
+	<input type="hidden" name="spentTypeSession" id="spentTypeSession" value="<%= session[:timelog] && session[:timelog][:spent_type] %>">
+<% end %>
+<!-- Spent time show on map -->
+<% if controller_name == "timelog" && action_name == "index" && wktime_helper.isChecked('te_save_geo_location') %>
+	<% show_on_map = session[:timelog] && session[:timelog][:show_on_map] %>
+	<div id="show_map_filter" >
+		<label style="padding-left:5px">
+			<%= check_box_tag('show_on_map', true, show_on_map, onclick: '$("#query_form").submit(); return false;') %><%= l(:label_show_on_map) %>
+		</label>
+	</div>
+	<script>
+		$(function(){
+			$('#spent_type').parent('td').after('<td id="showmap_header"></td>');
+			$('#show_map_filter').appendTo('#showmap_header');
+		});
+	</script>
+	<% if show_on_map && @entries.present? %>
+		<script>
+			$(function(){
+				$('#content .autoscroll').prepend('<div id="map-wrapper"></div>');
+				$('#map-wrapper').append('<div id="list-wrapper" style="width: 49%; float: left; overflow-x: scroll; padding-right: 5px"></div>');
+				$('.list.odd-even.time-entries').appendTo('#list-wrapper');
+				$('#mapheader').appendTo('#map-wrapper');
+				$('.list.odd-even.time-entries').css({ width:'50%'});
+			});
+		</script>
+		<%= render partial: "wkgeolocation/show_on_map", locals: { entries: @entries, height: '96%', width: '49%', model: 'spent_for' } %>
+	<% end %>
+<% end %>

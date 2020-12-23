@@ -1,5 +1,5 @@
 # ERPmine - ERP for service industry
-# Copyright (C) 2011-2016  Adhi software pvt ltd
+# Copyright (C) 2011-2020  Adhi software pvt ltd
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -24,12 +24,17 @@ include WkbillingHelper
 include WkpayrollHelper
 
 
-    def options_for_wktime_account(blankOption, accountType)
+	def options_for_wktime_account(blankOption, accountType, isAccountType)
 		accArr = Array.new
 		if blankOption
 		  accArr << [ "", ""]
 		end
-		accname = WkAccount.where(:account_type => accountType).order(:name)
+		hookType = call_hook(:additional_type)
+		if hookType.blank? || !isAccountType
+			accname = WkAccount.where(:account_type => accountType).order(:name)
+		else
+			accname = WkAccount.where("account_type = ? or account_type = ?", accountType, hookType).order(:name)
+		end
 		if !accname.blank?
 			accname.each do | entry|
 				accArr << [ entry.name, entry.id ]
@@ -65,7 +70,7 @@ include WkpayrollHelper
 			moduleAmtHash = {'inventory' => [nil, totalAmount.round - invoiceAmount.round], getAutoPostModule => [totalAmount.round, invoiceAmount.round]}
 			inverseModuleArr = ['inventory']
 			transAmountArr = getTransAmountArr(moduleAmtHash, inverseModuleArr)
-			if (totalAmount.round - totalAmount) != 0
+			if isChecked("invoice_auto_round_gl") && (totalAmount.round - totalAmount) != 0
 				addRoundInvItem(totalAmount)
 			end
 			if totalAmount > 0 && autoPostGL(getAutoPostModule)
@@ -89,7 +94,7 @@ include WkpayrollHelper
 		unless @invoice.save
 			errorMsg = @invoice.errors.full_messages.join("<br>")
 		else
-			call_hook(:controller_after_save_invoice, {:attributes => @invoice.attributes}) if @invoice.parent_type != "WkAccount"
+			call_hook(:controller_after_save_invoice, {:attributes => @invoice.attributes})
 		end
 		errorMsg
 	end
@@ -595,7 +600,7 @@ include WkpayrollHelper
 	def isAccountBilling(accountProject)
 		ret = false
 		if accountProject.parent_type == 'WkAccount'
-			ret = accountProject.parent.account_billing
+			ret = accountProject.parent.account_billing unless accountProject.parent.nil?
 		end
 		ret
 	end
@@ -609,11 +614,11 @@ include WkpayrollHelper
 		from wk_invoices i
 		left outer join wk_invoice_items it on i.id = it.invoice_id
 		group by i.id) inv
-		left join (select sum(original_amount) paid_amount, invoice_id from wk_payment_items where is_deleted = #{false} group by invoice_id) pay on pay.invoice_id = inv.id
-		left join wk_payment_items pit on(inv.id = pit.invoice_id and pit.is_deleted = #{false})
+		left join (select sum(original_amount) paid_amount, invoice_id from wk_payment_items where is_deleted = #{booleanFormat(false)} group by invoice_id) pay on pay.invoice_id = inv.id
+		left join wk_payment_items pit on(inv.id = pit.invoice_id and pit.is_deleted = #{booleanFormat(false)})
 		left join (select gcr.*, invitm.invoice_id from (select sum(original_amount) given_pay_credit, credit_payment_item_id from wk_invoice_items
 		where credit_payment_item_id is not null group by credit_payment_item_id) gcr
-		left join wk_payment_items invitm on (invitm.id = gcr.credit_payment_item_id and invitm.is_deleted = #{false})) pcr on (pcr.credit_payment_item_id = pit.id OR  pcr.invoice_id = inv.id)
+		left join wk_payment_items invitm on (invitm.id = gcr.credit_payment_item_id and invitm.is_deleted = #{booleanFormat(false)})) pcr on (pcr.credit_payment_item_id = pit.id OR  pcr.invoice_id = inv.id)
 		left join (select sum(original_amount) given_inv_credit, credit_invoice_id from wk_invoice_items
 		where credit_invoice_id is not null group by credit_invoice_id) icr on (icr.credit_invoice_id = inv.id)
 		left join wk_invoices i on i.id = inv.id

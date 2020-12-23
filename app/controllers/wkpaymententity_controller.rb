@@ -1,5 +1,5 @@
 # ERPmine - ERP for service industry
-# Copyright (C) 2011-2017  Adhi software pvt ltd
+# Copyright (C) 2011-2020  Adhi software pvt ltd
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -40,16 +40,18 @@ class WkpaymententityController < WkbillingController
 		contact_id = session[controller_name].try(:[], :contact_id)
 		account_id = session[controller_name].try(:[], :account_id)
 		
-		sqlStr = "select p.*, pmi.payment_amount, pmi.payment_original_amount, CASE WHEN p.parent_type = 'WkAccount' THEN a.name" +
-			" ELSE #{concatColumnsSql(['c.first_name', 'c.last_name'], nil, ' ')} END as name," +
-			" (#{getPersonTypeSql}) as entity_type" + 
+		selectStr = "select p.*, pmi.payment_amount, pmi.payment_original_amount, CASE WHEN p.parent_type = 'WkAccount' THEN a.name" +
+		" ELSE #{concatColumnsSql(['c.first_name', 'c.last_name'], nil, ' ')} END as name," +
+		" (#{getPersonTypeSql}) as entity_type"
+
+		sqlStr =
 			" from wk_payments p left join (select sum(original_amount) as payment_original_amount, sum(amount) as payment_amount," +
-			" payment_id from wk_payment_items where is_deleted = #{false} group by payment_id) pmi" +
+			" payment_id from wk_payment_items where is_deleted = #{booleanFormat(false)} group by payment_id) pmi" +
 			" on(pmi.payment_id = p.id)" +
 			" left join wk_accounts a on (p.parent_type = 'WkAccount' and p.parent_id = a.id)" +
 			" left join wk_crm_contacts c on (p.parent_type = 'WkCrmContact' and p.parent_id = c.id)" +
-			" where pmi.payment_amount > 0 and pmi.payment_original_amount > 0" 
-		sqlHook = call_hook :payment_additional_where_query
+			" where pmi.payment_amount > 0 and pmi.payment_original_amount > 0"  
+		sqlHook = call_hook :payment_additional_where_query if getInvoiceType == 'I'
 		if filter_type == '2' && !contact_id.blank?			
 			sqlwhere = sqlwhere + " and p.parent_id = '#{contact_id}'  and p.parent_type = 'WkCrmContact' and ((#{getPersonTypeSql}) = '#{getOrderContactType}' " + (sqlHook.blank? ? " )" : sqlHook[0] + ")" )
 		elsif filter_type == '2' && contact_id.blank?			
@@ -57,9 +59,9 @@ class WkpaymententityController < WkbillingController
 		end
 		
 		if filter_type == '3' && !account_id.blank?			
-			sqlwhere = sqlwhere + " and p.parent_id = '#{account_id}'  and p.parent_type = 'WkAccount' and (#{getPersonTypeSql}) = '#{getOrderAccountType}' "
+			sqlwhere = sqlwhere + " and p.parent_id = '#{account_id}'  and p.parent_type = 'WkAccount' and (#{getPersonTypeSql}) = '#{getOrderAccountType}' " + (sqlHook.blank? ? " )" : sqlHook[0] + ")" )
 		elsif filter_type == '3' && account_id.blank?			
-			sqlwhere = sqlwhere + " and p.parent_type = 'WkAccount' and (#{getPersonTypeSql}) = '#{getOrderAccountType}' "
+			sqlwhere = sqlwhere + " and p.parent_type = 'WkAccount' and (#{getPersonTypeSql}) = '#{getOrderAccountType}' " + (sqlHook.blank? ? " )" : sqlHook[0] + ")" )
 		end
 		
 		if !@from.blank? && !@to.blank?				
@@ -71,8 +73,14 @@ class WkpaymententityController < WkbillingController
 		end	
 		
 		sqlStr = sqlStr + sqlwhere unless sqlwhere.blank?
-		sqlStr = sqlStr + " ORDER BY " + (sort_clause.present? ? sort_clause.first : " p.id desc")
-		findBySql(sqlStr)				
+		orderStr = " ORDER BY " + (sort_clause.present? ? sort_clause.first : " p.id desc")
+		findBySql(selectStr, sqlStr, orderStr)
+		respond_to do |format|
+			format.html {        
+			  render :layout => !request.xhr?
+			}
+			format.api
+		end				
     end
 	
 	def edit
@@ -88,11 +96,17 @@ class WkpaymententityController < WkbillingController
 		else	
 			unless params[:payment_id].blank?
 				@payment = WkPayment.find(params[:payment_id].to_i)
-				@payemntItem = @payment.payment_items.current_items 
+				@paymentItem = @payment.payment_items.current_items 
 				unless params[:is_report].blank? || !to_boolean(params[:is_report])
-					@payemntItem = @payemntItem.order(:project_id, :item_type)			
+					@paymentItem = @paymentItem.order(:project_id, :item_type)			
 				end
 			end
+		end
+		respond_to do |format|
+				format.html {        
+					render :layout => !request.xhr?
+				}
+				format.api
 		end
 	end
 	
@@ -108,7 +122,7 @@ class WkpaymententityController < WkbillingController
 
 	def set_filter_session
 		session[controller_name] = {:from => @from, :to => @to} if session[controller_name].nil?
-		if params[:searchlist] == controller_name
+		if params[:searchlist] == controller_name || api_request?
 			filters = [:period_type, :period, :from, :to, :contact_id, :account_id, :polymorphic_filter]
 			filters.each do |param|
 				if params[param].blank? && session[controller_name].try(:[], param).present?
@@ -120,14 +134,12 @@ class WkpaymententityController < WkbillingController
 		end
   end
 	
-  def findBySql(query)
-		result = WkPayment.find_by_sql("select count(*) as id from (" + query + ") as v2")
-	    @entry_count = result.blank? ? 0 : result[0].id
-	    setLimitAndOffset()		
-	    rangeStr = formPaginationCondition()	
-			@payment_entries = WkPayment.find_by_sql(query + rangeStr)
-		result = WkPayment.find_by_sql("select sum(v2.payment_amount) as payment_amount from (" + query + ") as v2")
-		@totalPayAmt = result.blank? ? 0 : result[0].payment_amount
+  def findBySql(selectStr, query, orderStr)
+		@entry_count = findCountBySql(query, WkPayment)
+		setLimitAndOffset()		
+		rangeStr = formPaginationCondition()
+		@payment_entries = WkPayment.find_by_sql(selectStr + query + orderStr + rangeStr)
+	@totalPayAmt = findSumBySql(query, 'payment_amount', WkPayment)
 	end
 
 	def setLimitAndOffset		
@@ -171,6 +183,14 @@ class WkpaymententityController < WkbillingController
 	end
 	
 	def update
+		if api_request?
+			params['payment_entries'].each_with_index do |entry, index|
+				entry.each do | item |
+					params[item.first + (index+1).to_s] = item.last				
+				end
+			end
+			params['totalrow'] = params['payment_entries'].length
+		end
 		errorMsg = nil
 		paymentItem = nil
 		unless params["payment_id"].blank?
@@ -233,13 +253,25 @@ class WkpaymententityController < WkbillingController
 			end
 		end
 		
-		if errorMsg.nil? 
-			redirect_to :action => 'index' , :tab => controller_name
-			flash[:notice] = l(:notice_successful_update)
-	   else
-			flash[:error] = errorMsg
-			redirect_to :action => 'edit', :payment_id => @payment.id
-	   end
+		respond_to do |format|
+			format.html {
+					if errorMsg.nil? 
+							redirect_to :action => 'index' , :tab => controller_name
+							flash[:notice] = l(:notice_successful_update)
+					else
+							flash[:error] = errorMsg
+							redirect_to :action => 'edit', :payment_id => @payment.id
+					end
+			}
+			format.api{
+					if errorMsg.nil?
+							render :plain => errorMsg, :layout => nil
+					else			
+							@error_messages = errorMsg.split('\n')	
+							render :template => 'common/error_messages.api', :status => :unprocessable_entity, :layout => nil
+					end
+			}
+		end
 	end
 
 	def getItemLabel

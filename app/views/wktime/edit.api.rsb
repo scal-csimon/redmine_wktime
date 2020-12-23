@@ -1,5 +1,6 @@
 api.wk_time do
-  api.user(:id => @user.id, :name => @user.name)
+  api.id @user.id
+  api.name @user.name
   api.startday @startday
   api.status statusString(@wktime.status) unless @wktime.nil?
   api.total @wktime.hours unless @wktime.nil?
@@ -12,12 +13,15 @@ api.wk_time do
 		api.time_entry do
 		  api.id time_entry.id
 		  api.project(:id => time_entry.project_id, :name => time_entry.project.name) unless time_entry.project.nil?
-		  api.issue(:id => time_entry.issue_id) unless time_entry.issue.nil?
+		  api.issue(:id => time_entry.issue_id, :name => time_entry.issue.subject) unless time_entry.issue.nil?
 		  api.user(:id => time_entry.user_id, :name => time_entry.user.name) unless time_entry.user.nil?
 		  api.activity(:id => time_entry.activity_id, :name => time_entry.activity.name) unless time_entry.activity.nil?
 		  api.hours time_entry.hours
 		  api.comments time_entry.comments
 		  api.spent_on time_entry.spent_on
+      if time_entry.spent_for.present?
+        api.spentFor(id: time_entry.spent_for.id, s_longitude: time_entry.spent_for.s_longitude, s_latitude: time_entry.spent_for.s_latitude, e_longitude: time_entry.spent_for.e_longitude, e_latitude: time_entry.spent_for.e_latitude)
+      end
 		  
 		  #render_api_custom_values defined in app/helpers/custom_fields_helper.rb
 		  render_api_custom_values time_entry.custom_field_values, api

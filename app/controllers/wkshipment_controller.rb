@@ -1,3 +1,20 @@
+# ERPmine - ERP for service industry
+# Copyright (C) 2011-2020  Adhi software pvt ltd
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 class WkshipmentController < WkinventoryController
   unloadable
   menu_item :wkproduct
@@ -11,7 +28,7 @@ include WkinventoryHelper
 
 
 	def index
-		sort_init 'id', 'asc'
+		sort_init 'shipment_date', 'desc'
 		sort_update 'serial_number' => "#{WkShipment.table_name}.serial_number",
 					'shipment_name' => "#{WkShipment.table_name}.parent_type",
 					'shipment_date' => "#{WkShipment.table_name}.shipment_date"
@@ -170,45 +187,45 @@ include WkinventoryHelper
 		assetTotal = 0
 		while savedRows < totalRow
 			i = savedRows + deletedRows + 1
-			if params["item_id#{i}"].blank? && params["product_id#{i}"].blank?
+			if params["item_id_#{i}"].blank? && params["product_id_#{i}"].blank?
 				deletedRows = deletedRows + 1
 				next
 			end
-			unless params["item_id#{i}"].blank?			
-				arrId.delete(params["item_id#{i}"].to_i)
-				shipmentItem = WkInventoryItem.find(params["item_id#{i}"].to_i)
+			unless params["item_id_#{i}"].blank?			
+				arrId.delete(params["item_id_#{i}"].to_i)
+				shipmentItem = WkInventoryItem.find(params["item_id_#{i}"].to_i)
 			else				
 				shipmentItem = @shipment.inventory_items.new
 			end
 			unless isUsedInventoryItem(shipmentItem)
-				shipmentItem.product_item_id = params["product_item_id#{i}"].to_i
-				shipmentItem.product_attribute_id = params["product_attribute_id#{i}"]
-				if sysCurrency != params["currency#{i}"]
-					shipmentItem.org_currency = params["currency#{i}"]
-					shipmentItem.org_cost_price = params["cost_price#{i}"]
-					shipmentItem.org_over_head_price = params["over_head_price#{i}"]
-					shipmentItem.org_selling_price = params["selling_price#{i}"]
+				shipmentItem.product_item_id = params["product_item_id_#{i}"].to_i
+				shipmentItem.product_attribute_id = params["product_attribute_id_#{i}"]
+				if sysCurrency != params["currency_#{i}"]
+					shipmentItem.org_currency = params["currency_#{i}"]
+					shipmentItem.org_cost_price = params["cost_price_#{i}"]
+					shipmentItem.org_over_head_price = params["over_head_price_#{i}"]
+					shipmentItem.org_selling_price = params["selling_price_#{i}"]
 				end
 				shipmentItem.currency = sysCurrency
-				shipmentItem.cost_price = getExchangedAmount(params["currency#{i}"], params["cost_price#{i}"]) 
-				shipmentItem.over_head_price = getExchangedAmount(params["currency#{i}"], params["over_head_price#{i}"])
-				shipmentItem.selling_price = getExchangedAmount(params["currency#{i}"], params["selling_price#{i}"]) 
-				shipmentItem.serial_number = params["serial_number#{i}"]
-				shipmentItem.product_type = params["product_type#{i}"]
-				shipmentItem.notes = params["notes#{i}"]
-				shipmentItem.available_quantity = params["total_quantity#{i}"] if shipmentItem.new_record? || shipmentItem.available_quantity == shipmentItem.total_quantity
-				shipmentItem.total_quantity = params["total_quantity#{i}"]
+				shipmentItem.cost_price = getExchangedAmount(params["currency_#{i}"], params["cost_price_#{i}"]) 
+				shipmentItem.over_head_price = getExchangedAmount(params["currency_#{i}"], params["over_head_price_#{i}"])
+				shipmentItem.selling_price = getExchangedAmount(params["currency_#{i}"], params["selling_price_#{i}"]) 
+				shipmentItem.serial_number = params["serial_number_#{i}"]
+				shipmentItem.product_type = params["product_type_#{i}"]
+				shipmentItem.notes = params["notes_#{i}"]
+				shipmentItem.available_quantity = params["total_quantity_#{i}"] if shipmentItem.new_record? || shipmentItem.available_quantity == shipmentItem.total_quantity
+				shipmentItem.total_quantity = params["total_quantity_#{i}"]
 				shipmentItem.status = 'o'
-				shipmentItem.uom_id = params["uom_id#{i}"].to_i unless params["uom_id#{i}"].blank?
-				shipmentItem.location_id = params["location_id#{i}"].to_i if !params["location_id#{i}"].blank? && params["location_id#{i}"] != "0"
-				shipmentItem.project_id = params["project_id#{i}"].to_i if !params["project_id#{i}"].blank? && params["project_id#{i}"] != "0"
-				if params["product_type#{i}"] == 'A' || params["product_type#{i}"] == 'RA'
+				shipmentItem.uom_id = params["uom_id_#{i}"].to_i unless params["uom_id_#{i}"].blank?
+				shipmentItem.location_id = params["location_id_#{i}"].to_i if !params["location_id_#{i}"].blank? && params["location_id_#{i}"] != "0"
+				shipmentItem.project_id = params["project_id_#{i}"].to_i if !params["project_id_#{i}"].blank? && params["project_id_#{i}"] != "0"
+				if params["product_type_#{i}"] == 'A' || params["product_type_#{i}"] == 'RA'
 					assetValue = (shipmentItem.total_quantity*(shipmentItem.cost_price+shipmentItem.over_head_price))
 					assetTotal = assetTotal + assetValue
 					accountingLedger = WkProductItem.find(shipmentItem.product_item_id).product.ledger_id
 					ledgerId = ((!accountingLedger.blank? && accountingLedger > 0) ? accountingLedger : getSettingCfId("inventory_db_ledger"))
 					assetAccountingHash[ledgerId] = assetAccountingHash[ledgerId].blank? ? assetValue : assetAccountingHash[ledgerId] + assetValue
-					quantity = params["total_quantity#{i}"].to_i
+					quantity = params["total_quantity_#{i}"].to_i
 					shipmentItem.available_quantity = 1
 					shipmentItem.total_quantity = 1
 					for i in 1 .. quantity - 1
@@ -241,9 +258,7 @@ include WkinventoryHelper
 			redirect_to :action => 'edit', :shipment_id => @shipment.id
 	   end
 	end
-	
-	
-	
+
 	def destroy
 		begin
 			shipment = WkShipment.find(params[:shipment_id].to_i)
@@ -275,7 +290,7 @@ include WkinventoryHelper
 	def formPagination(entries)
 		@entry_count = entries.count
         setLimitAndOffset()
-		@shipmentEntries = entries.order(shipment_date: :desc).limit(@limit).offset(@offset)
+		@shipmentEntries = entries.limit(@limit).offset(@offset)
 	end
 	
 	def setLimitAndOffset		
@@ -368,6 +383,10 @@ include WkinventoryHelper
 	end
 	
 	def additionalContactType
+		false
+	end
+	
+	def additionalAccountType
 		false
 	end
 	

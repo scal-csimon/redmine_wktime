@@ -1,11 +1,30 @@
+# ERPmine - ERP for service industry
+# Copyright (C) 2011-2020  Adhi software pvt ltd
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 class WkcrmenumerationController < WkbaseController
   unloadable
   include WktimeHelper
   before_action :require_login
   before_action :check_perm_and_redirect, :only => [:index, :edit, :update, :destroy]
+    
+  accept_api_auth :getCrmEnumerations
 
     def index
-		sort_init 'id', 'asc'
+		sort_init 'type', 'asc'
 		sort_update 'type' => "enum_type",
 					'name' => "name",
 					'position' => "position"
@@ -72,7 +91,7 @@ class WkcrmenumerationController < WkbaseController
 	def formPagination(entries)
 		@entry_count = entries.count
         setLimitAndOffset()
-		@crmenum = entries.order(enum_type: :asc, name: :asc).limit(@limit).offset(@offset)
+		@crmenum = entries.limit(@limit).offset(@offset)
 	end
 	
 	def setLimitAndOffset		
@@ -105,4 +124,15 @@ class WkcrmenumerationController < WkbaseController
 		end
 	end
 
+	def getCrmEnumerations
+		if params[:enum_type]
+			wkcrmenums = WkCrmEnumeration.where(enum_type: params[:enum_type], active: true)
+				.order(enum_type: :asc, position: :asc, name: :asc)
+			enums = []
+			enums = wkcrmenums.map{ |enum| { value: enum.id, label: enum.name }}
+			render json: enums
+		else
+			render_403
+		end
+	end
 end

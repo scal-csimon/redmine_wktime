@@ -1,5 +1,5 @@
 # ERPmine - ERP for service industry
-# Copyright (C) 2011-2018  Adhi software pvt ltd
+# Copyright (C) 2011-2020  Adhi software pvt ltd
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,6 +20,8 @@ module WktimeHelper
   include Redmine::Export::PDF
   include Redmine::Export::PDF::IssuesPdfHelper
   include Redmine::Utils::DateCalculation
+	include AttachmentsHelper
+	include WkdocumentHelper
   
 
 	def options_for_period_select(value)
@@ -147,7 +149,6 @@ module WktimeHelper
 	top_margin = Setting.plugin_redmine_wktime['wktime_margin_top'].to_i
 	col_id_width  = 10
 	row_height    = Setting.plugin_redmine_wktime['wktime_line_space'].to_i
-	logo    = Setting.plugin_redmine_wktime['wktime_header_logo']
 
 	if page_height == 0
 		page_height = 297
@@ -222,11 +223,12 @@ module WktimeHelper
 	pdf.footer_date = format_date(Date.today)
 	pdf.SetAutoPageBreak(false)
 	pdf.AddPage(orientation)
-	
-	if !logo.blank? && (File.exist? (Redmine::Plugin.public_directory + "/redmine_wktime/images/" + logo))
-		pdf.Image(Redmine::Plugin.public_directory + "/redmine_wktime/images/" + logo, page_width-50, 10,40,25)
+
+	logo = WkLocation.getMainLogo()
+	if logo.present?
+		pdf.Image(logo.diskfile.to_s, page_width-50, 15, 30, 20)
 	end
-	
+
 	render_header(pdf, entries, user, startday, row_height,title)
 
 	pdf.Ln
@@ -306,8 +308,8 @@ module WktimeHelper
 	#new page logo
 	def render_newpage(pdf,orientation,logo,page_width)
 		pdf.AddPage(orientation)
-		if !logo.blank? && (File.exist? (Redmine::Plugin.public_directory + "/redmine_wktime/images/" + logo))
-			pdf.Image(Redmine::Plugin.public_directory + "/redmine_wktime/images/" + logo, page_width-50, 10,40,25)
+		if logo.present?
+			pdf.Image(logo.diskfile.to_s, page_width-50, 15, 30, 25)
 			pdf.Ln
 			pdf.SetY(pdf.GetY+25)
 		end
@@ -604,17 +606,25 @@ end
 		end
 		return 	result		
 	end
-	
+
+  def getExpenseEntryStatus(spent_on, user_id)
+		start_day = getStartDay(spent_on)
+		result = Wkexpense.where(['begin_date = ? AND user_id = ?', start_day, user_id])
+		result = result[0].blank? ? 'n' : result[0].status
+		return 	result	  
+  end
+
 	def time_expense_tabs
 		if params[:controller] == "wktime" || params[:controller] == "wkexpense" 
 			tabs = [
 				{:name => 'wktime', :partial => 'wktime/tab_content', :label => :label_wktime},
 				{:name => 'wkexpense', :partial => 'wktime/tab_content', :label => :label_wkexpense}
 			   ]
-		 elsif params[:controller] == "wkattendance" || params[:controller] == "wkpayroll" || params[:controller] == "wkscheduling"  || params[:controller] == "wkschedulepreference" || params[:controller] == "wkshift" || params[:controller] == "wkpublicholiday" || params[:controller] == "wksurvey"
+		 elsif params[:controller] == "wkattendance" || params[:controller] == "wkpayroll" || params[:controller] == "wkscheduling"  || params[:controller] == "wkschedulepreference" || params[:controller] == "wkshift" || params[:controller] == "wkpublicholiday" || params[:controller] == "wksurvey" || params[:controller] == "wkleaverequest"
 				tabs = []
 				if showAttendance
 					tabs << {:name => 'leave', :partial => 'wktime/tab_content', :label => :label_wk_leave}
+					tabs <<	{:name => 'wkleaverequest', :partial => 'wktime/tab_content', :label => :label_leave_request}
 					tabs <<	{:name => 'clock', :partial => 'wktime/tab_content', :label => :label_clock}
 					tabs <<	{:name => 'wkpublicholiday', :partial => 'wktime/tab_content', :label => :label_public_holiday}
 					
@@ -662,14 +672,14 @@ end
 				{:name => 'wksupplieraccount', :partial => 'wktime/tab_content', :label => :label_supplier_account},
 				{:name => 'wksuppliercontact', :partial => 'wktime/tab_content', :label => :label_supplier_contact}
 			   ]
-		elsif params[:controller] == "wkcrmenumeration" || params[:controller] == "wktax" || params[:controller] == "wkexchangerate" || params[:controller] == "wklocation" || params[:controller] == "wkgrouppermission"
+		elsif params[:controller] == "wkcrmenumeration" || params[:controller] == "wktax" || params[:controller] == "wkexchangerate" || params[:controller] == "wklocation" || params[:controller] == "wkgrouppermission" || params[:controller] == "wknotification"
 			tabs = [
 				{:name => 'wkcrmenumeration', :partial => 'wktime/tab_content', :label => :label_enumerations},
 				{:name => 'wklocation', :partial => 'wktime/tab_content', :label => :label_location},
 				{:name => 'wktax', :partial => 'wktime/tab_content', :label => :label_tax},
 				{:name => 'wkexchangerate', :partial => 'wktime/tab_content', :label => :label_exchange_rate},
-				{:name => 'wkgrouppermission', :partial => 'wktime/tab_content', :label => :label_permissions}
-				
+				{:name => 'wkgrouppermission', :partial => 'wktime/tab_content', :label => :label_permissions},
+				{:name => 'wknotification', :partial => 'wktime/tab_content', :label => :field_mail_notification},				
 			   ]
 		else
 			tabs = [
@@ -773,10 +783,10 @@ end
 				{:name => 'wktime_settings', :partial => 'settings/tab_time', :label => :label_te},
 				{:name => 'attendance', :partial => 'settings/tab_attendance', :label => :report_attendance},
 				{:name => 'payroll_settings', :partial => 'settings/tab_payroll', :label => :label_payroll},
+				{ :name => 'crm', :partial => 'settings/tab_crm', :label => :label_crm },
 				{:name => 'billing', :partial => 'settings/tab_billing', :label => :label_wk_billing},
 				{:name => 'purchase', :partial => 'settings/tab_purchase', :label => :label_purchasing},
 				{:name => 'inventory', :partial => 'settings/tab_inventory', :label => :label_inventory}
-				#{:name => 'shiftscheduling', :partial => 'settings/tab_shift_scheduling', :label => :label_scheduling}
 			   ]	
 	end	
 	
@@ -1234,7 +1244,7 @@ end
 			Setting.plugin_redmine_wktime['wktime_enable_dashboards_module'].to_i == 0))
 	end
 	
-	def getDatesSql(from, intervalVal, intervalType)
+	def getDatesSql(from, intervalVal, intervalType, to)
 		sqlStr = "(select " + getAddMonthDateStr(from,intervalVal,intervalType) + " selected_date from " +
 			"(select 0 i union select 1 union select 2 union select 3 union select 4 union select 5 union select 6 union select 7 union select 8 union select 9) t0,
 			 (select 0 i union select 1 union select 2 union select 3 union select 4 union select 5 union select 6 union select 7 union select 8 union select 9) t1,
@@ -1242,7 +1252,7 @@ end
 			 (select 0 i union select 1 union select 2 union select 3 union select 4 union select 5 union select 6 union select 7 union select 8 union select 9) t3,
 			 (select 0 i union select 1 union select 2 union select 3 union select 4 union select 5 union select 6 union select 7 union select 8 union select 9)t4"
 		if intervalType == 'month'
-			sqlStr = sqlStr + " where #{getIntervalFormula(intervalVal)}<24000" 
+			sqlStr = sqlStr + " where #{getIntervalFormula(intervalVal)}<24000 AND " + getAddMonthDateStr(from,intervalVal,intervalType) + " BETWEEN '#{from}' and '#{to}'"
 		end
 		sqlStr = sqlStr + " )v"
 	
@@ -1408,7 +1418,7 @@ end
 		entryTime
 	end
 	
-	def saveSpentFor(id, spentForId, spentFortype, spentId, spentType, spentDate, spentHr, spentMm, invoiceId)
+	def saveSpentFor(id, spentForId, spentFortype, spentId, spentType, spentDate, spentHr, spentMm, invoiceId, startON=nil, endON=nil, latitude=nil, longitude=nil, clock_action=nil)
 		if id.blank?
 			spentObj = WkSpentFor.new
 		else
@@ -1418,9 +1428,31 @@ end
 		spentObj.spent_for_type = spentFortype
 		spentObj.spent_id = spentId
 		spentObj.spent_type = spentType
-		spentObj.spent_on_time = getDateTime(spentDate, spentHr, spentMm, '00')
 		spentObj.invoice_item_id = invoiceId
+
+		if isChecked("label_enable_issue_logger")
+			spentObj.end_on = endON if clock_action.blank? || clock_action == "E"
+			spentObj.clock_action = clock_action if clock_action.present?
+		end
+		if startON.present?
+			spentObj.spent_on_time = startON
+		else
+			spentObj.spent_on_time = getDateTime(spentDate, spentHr, spentMm, '00')
+		end
+
+		# save GeoLocation
+		if isChecked('te_save_geo_location') && latitude.present? && longitude.present?
+			if spentObj.blank? || spentObj.s_longitude.blank? && spentObj.s_latitude.blank? && (clock_action.blank? || clock_action == "S")
+				spentObj.s_longitude = longitude
+				spentObj.s_latitude = latitude
+			end
+			if spentObj.blank? || spentObj.e_longitude.blank? && spentObj.e_latitude.blank? && (clock_action.blank? || clock_action == "E")
+				spentObj.e_longitude = longitude
+				spentObj.e_latitude = latitude
+			end
+		end
 		spentObj.save
+		spentObj
 	end
 	
 	def getMonthsBetween(startDate, endDate, startDay)
@@ -1792,5 +1824,132 @@ end
 			redirect = Hash.new
 		end
 		redirect
+	end
+
+	def booleanFormat(value)
+		value = value ? 1 : 0 if ActiveRecord::Base.connection.adapter_name == 'SQLServer'
+		return value
+	end
+
+	def getDatePart(colName, type, aliasName = nil)
+		if ActiveRecord::Base.connection.adapter_name == 'SQLServer'		
+			monthStr = aliasName ? "#{type}(#{colName}) as #{aliasName}" : "#{type}(#{colName})"
+		else
+			# For MySQL, PostgreSQL, SQLite
+			monthStr =  aliasName ?  "extract(#{type} from #{colName}) as #{aliasName}" : "extract(#{type} from #{colName})"
+		end
+		monthStr
+	end
+
+	def saveIssueLogger
+		entryTime = Time.now
+		entryTime = entryTime - (entryTime.utc_offset.seconds + (params[:offSet].to_i).minutes)
+
+		lastTimeEntry = WkSpentFor.getIssueLog.first
+		if lastTimeEntry.blank?
+			project = Issue.find(params[:issue_id]).project
+			activityID = project.activities.first.id
+			timeEntryAttr = {
+				project_id: project.id, user_id: User.current.id, issue_id: params[:issue_id], hours: 0.1, activity_id: activityID,
+				spent_on: Date.today, author_id: User.current.id, spent_for_attributes: { spent_on_time: entryTime, start_on: entryTime }
+			}
+			# save GeoLocation
+			if isChecked('te_save_geo_location') && params[:longitude].present? && params[:latitude].present?
+				timeEntryAttr[:spent_for_attributes][:s_longitude] =  params[:longitude]
+				timeEntryAttr[:spent_for_attributes][:s_latitude] = params[:latitude]
+			end
+			timeEntry = TimeEntry.new(timeEntryAttr)
+		else
+			timeEntry = TimeEntry.find(lastTimeEntry.id)
+			start  = DateTime.strptime(timeEntry.spent_for.start_on.to_s, "%Y-%m-%d %H:%M:%S %z").to_time
+			finish = DateTime.strptime(entryTime.to_s, "%Y-%m-%d %H:%M:%S %z").to_time
+			finish += 24*60*60 if finish < start
+			timeEntry.hours = ((finish-start)/3600).round(2)
+			timeEntry.spent_for.end_on = entryTime
+			# save GeoLocation
+			if isChecked('te_save_geo_location') && params[:longitude].present? && params[:latitude].present?
+				timeEntry.spent_for.e_longitude = params[:longitude]
+				timeEntry.spent_for.e_latitude = params[:latitude]
+			end
+		end
+		timeEntry.save
+	end
+
+	def time_diff(start_time, end_time)
+		seconds_diff = (start_time - end_time).to_i.abs
+	
+		hours = seconds_diff / 3600
+		seconds_diff -= hours * 3600
+	
+		minutes = seconds_diff / 60
+		seconds_diff -= minutes * 60
+	
+		seconds = seconds_diff
+	
+		"#{hours.to_s.rjust(2, '0')}:#{minutes.to_s.rjust(2, '0')}:#{seconds.to_s.rjust(2, '0')}"
+	end
+
+	def get_current_DateTime(offSet=nil)
+		offSet ||= params[:offSet]
+		dateTime = Time.now
+		dateTime = dateTime - (dateTime.utc_offset.seconds + (offSet.to_i).minutes)
+		dateTime = DateTime.strptime(dateTime.to_s, "%Y-%m-%d %H:%M:%S %z").to_time
+	end
+
+	def getAssetQuantity(startDate, endDate, inventory_item_id)
+		inventoryObj = WkInventoryItem.find(inventory_item_id)
+		obj = inventoryObj.asset_property
+		hours = ((endDate - startDate) / (60 * 60)).round(2)
+		case obj.rate_per
+		when "h"
+			quantity = hours 
+		when "d"
+			quantity = (hours / 24).round(2)
+		when "w"
+			quantity = (hours / (24 * 7)).round(2)
+		when "m"
+			quantity = (hours / (24 * 7 * 30.436875)).round(2)
+		when "q"
+			quantity = (hours / (24 * 7 * 30.436875 * 4)).round(2)
+		when "sa"
+			quantity = (hours / (24 * 7 * 30.436875 * 6)).round(2)
+		when "a"
+			quantity = (hours / (24 * 7 * 365.2425)).round(2)
+		end
+		return quantity
+	end
+
+	def saveGeoLocation(spentObj, latitude, longitude)
+		if isChecked('te_save_geo_location') && latitude.present? && longitude.present?
+			if spentObj['s_latitude'].blank? && spentObj['s_longitude'].blank?
+				spentObj['s_latitude'] = latitude
+				spentObj['s_longitude'] = longitude
+			end
+			if spentObj['e_latitude'].blank? && spentObj['e_longitude'].blank?
+				spentObj['e_latitude'] = latitude
+				spentObj['e_longitude'] = longitude
+			end
+		end
+	end
+
+	def showIssueLogger(project)
+		user = User.current
+		return (isChecked("label_enable_issue_logger") && (user.allowed_to?(:log_time, project) && (user.allowed_to?(:edit_own_time_entries, project) || user.allowed_to?(:edit_time_entries, project))))
+	end
+
+	def getEditLogPermission
+		projects = Project.active
+		user = User.current
+		projArr = []
+		projects.each{ |proj| projArr << proj.id if user.allowed_to?(:log_time, proj) && (user.allowed_to?(:edit_own_time_entries, proj) || user.allowed_to?(:edit_time_entries, proj))}
+		projArr
+	end
+
+	def supervisorReporters
+		{
+			l(:label_me).capitalize => '3',
+			l(:label_my_direct_reports) => '4',
+			l(:label_my_reports) => '5'
+		}
 	end
 end

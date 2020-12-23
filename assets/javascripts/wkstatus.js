@@ -2,6 +2,8 @@ var warnMsg;
 var hasEntryError = false;
 var hasTrackerError = false;
 var spentTypeVal;
+var myLongitude = 0;
+var myLatitude = 0;
 
 $(document).ready(function(){
 	var txtEntryDate;
@@ -9,10 +11,13 @@ $(document).ready(function(){
 	var timeWarnMsg = document.getElementById('label_time_warn');
 	var issueWarnMsg = document.getElementById('label_issue_warn');
 	
-	$('#quick-search').append( $('<br>') );	
-	$('#quick-search').append( $('#appendlabel') );	
-	$('#quick-search').append( $('#startdiv') ); 
-	$('#quick-search').append( $('#enddiv') );
+	$('#project-jump').after($('#clockINOUT'));
+	$('#clockINOUT').click(function(){
+		var name = $('#clockin').is(':visible') ? 'start' : 'end';
+		signAttendance(name);
+	});
+	clockTitle = $('#clockin').is(':visible') ? 'Clock in' : 'Clock out';
+	$("#clockINOUT").attr('title',clockTitle);
 	
 	if(document.getElementById('spent_type') == null)
 	{
@@ -49,9 +54,9 @@ $(document).ready(function(){
 			}
 		}			
 	}
-	else {
-		sessionStorage.clear();
-	}
+	// else {
+	// 	sessionStorage.clear();
+	// }
 	
 	if (timeWarnMsg != null && issueWarnMsg != null) {
 		warnMsg = [timeWarnMsg.value, issueWarnMsg.value];
@@ -91,21 +96,45 @@ $(document).ready(function(){
 			}, 500);		
 		});	
 	}
-	$(".time-entries.selected,.icon.icon-reload").click(function(){
-		sessionStorage.clear();
+	// $(".time-entries.selected,.icon.icon-reload").click(function(){
+	// 	sessionStorage.clear();
+	// });
+	
+	//Time Tracking
+		$("#project-jump").after($("#issueLog"));
+	observeSearchfield('issues-quick-search', null, $('#issues-quick-search').data('automcomplete-url'));
+	$('#issueLog span').on('click', function(){
+		const clock_action = $('#g_clock_action').val();
+		if(clock_action == 'S') $('#issue-content .quick-search').hide();
+		const offSet = (new Date).getTimezoneOffset();
+		projectID = $("#projectID").val();
+		$.ajax({
+			url: $('#issues-quick-search').data('automcomplete-url'),
+			type: 'get',
+			data: { q: '', project_id: projectID, type: clock_action == 'S' ? 'finish' : 'start', offSet: offSet },
+			success:function(data){
+				eval(data);
+			}
+		});
 	});
+
+	$(document).on('click', '.drdn-items.issues .issue_select', function(){
+		saveIssueTimeLog(this);
+  });
 });
 
 function spentTypeValue(elespent)
 {
-	 spentTypeVal = elespent.options[elespent.selectedIndex].value;
-	 sessionStorage.setItem("spent_type", spentTypeVal);
+	//  spentTypeVal = elespent.options[elespent.selectedIndex].value;
+	//  sessionStorage.setItem("spent_type", spentTypeVal);
 	 document.getElementById("query_form").submit();
 }
 
 function spentTypeSelection()
 {
-	var spcheck = sessionStorage.getItem("spent_type") == null ? "T" : sessionStorage.getItem("spent_type");
+	// const spent_type = (new URL(window.location.href)).searchParams.get("spent_type");
+	// var spcheck = sessionStorage.getItem("spent_type") == null ? (spent_type ? spent_type : "T") : sessionStorage.getItem("spent_type");
+	var spcheck = $('#spentTypeSession').val();
 	$("#spent_typeHF").val(spcheck);
 	if(document.getElementById('spent_type') != null) {
 		var ddl = document.getElementById('spent_type');
@@ -239,21 +268,63 @@ function signAttendance(str)
 	var mm = d.getMinutes();
 	elementhour = hh + ":" + mm;
 	var datevalue = d;
+  var offSet = d.getTimezoneOffset();
 	if( str == 'start' )
 	{
 	  document.getElementById('clockin' ).style.display = "none";
 	  document.getElementById('clockout').style.display = "block";
+	  $("#clockINOUT").attr('title','Clock out');
 	}
 	else
 	{
 	  document.getElementById('clockin' ).style.display = "block";
 	  document.getElementById('clockout').style.display = "none";
+	  $("#clockINOUT").attr('title','Clock in');
 	}
-	var clkInOutUrl = document.getElementById('clockinout_url').value;	
-	$.ajax({	
-	url: clkInOutUrl,//'/updateClockInOut',
-	type: 'get',
-	data: {startdate : datevalue, str: str},
-	success: function(data){ }   
+	var clkInOutUrl = document.getElementById('clockinout_url').value;
+	var data = { startdate : datevalue, str: str, offSet: offSet };
+	// Sending Geolocation params
+	if(myLatitude && myLongitude){
+		data['latitude'] = myLatitude;
+		data['longitude'] = myLongitude;
+	}
+	$.ajax({
+		url: clkInOutUrl,
+		type: 'post',
+		data: data,
+		success: function(data){ }
 	});
+}
+
+function saveIssueTimeLog(ele){
+	let date = new Date();
+	const offSet = date.getTimezoneOffset();
+	const clock_action = $('#g_clock_action').val();
+	let data = { offSet : offSet };
+	if(clock_action != 'S')
+		data['issue_id'] = ele.id
+	else
+		data['id'] = ele.id
+
+	if(myLatitude && myLongitude){
+		data['latitude'] = myLatitude;
+		data['longitude'] = myLongitude;
+	}
+	$.ajax({
+		url: '/wkbase/saveIssueTimeLog',
+		type: 'get',
+		data: data,
+		success: function(reponse){
+			if(reponse == 'finish'){
+				$('#issueImg img').prop('src','/plugin_assets/redmine_wktime/images/finish.png');
+				$('#g_clock_action').val('S');
+			}
+			else{
+				$('#issueImg img').prop('src','/plugin_assets/redmine_wktime/images/start.png');
+				$('#issue-content .quick-search').show();
+				$('#g_clock_action').val('');
+			}
+		}
+	});
+	$('.drdn.expanded').removeClass('expanded');
 }

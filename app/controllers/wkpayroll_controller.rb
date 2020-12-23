@@ -1,5 +1,5 @@
 # ERPmine - ERP for service industry
-# Copyright (C) 2011-2016  Adhi software pvt ltd
+# Copyright (C) 2011-2020  Adhi software pvt ltd
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -27,6 +27,8 @@ class WkpayrollController < WkbaseController
 	include WktimeHelper
 	include WkreportHelper
 
+	accept_api_auth :index, :edit
+
 	def index
 		payrollEntries()
 		payrollEntriesArr = @payrollEntries.to_a
@@ -45,11 +47,20 @@ class WkpayrollController < WkbaseController
 		end
 		@total_gross = @payrollEntries.sum { |k, p| p[:BT] + p[:AT] }
 		@total_net = @payrollEntries.sum { |k, p| p[:BT] + p[:AT] - p[:DT] }
+		respond_to do |format|
+      format.html {        
+        render :layout => !request.xhr?
+      }
+      format.api
+			format.pdf {
+				send_data(list_to_pdf(@payrollEntries, l(:label_payroll)), :type => 'application/pdf', :filename => "#{l(:label_payroll)}.pdf")
+			}
+		end
 
 	end
 
 	def payrollEntries
-		sort_init 'id', 'asc'
+		sort_init [['salary_date', 'desc'], ['join_date', 'asc']]
 		sort_update 'user' => "CONCAT(U.firstname, U.lastname)",
 					'salary_date' => "S.salary_date",
 					'basic_pay' => "basic_pay",
@@ -69,7 +80,7 @@ class WkpayrollController < WkbaseController
 		user_id = session[controller_name].try(:[], :user_id)
 		group_id = session[controller_name].try(:[], :group_id)
 		
-		if user_id.blank? || !validateERPPermission('A_TE_PRVLG')
+		if user_id.blank? || !validateERPPermission('A_PAYRL')
 		   ids = User.current.id
 		elsif user_id.to_i != 0 && group_id.to_i == 0
 		   ids = user_id.to_i
@@ -105,8 +116,8 @@ class WkpayrollController < WkbaseController
 			sql_contd += " AND " if sql_contd != " WHERE "
 			sql_contd += " S.user_id IN (#{userId}) "
 		end
-		orderSQL = (action_name == 'edit' || sort_clause.blank?)  ? "" : " ORDER BY "+ sort_clause.first
-		payroll_salaries = WkSalary.find_by_sql("SELECT S.*, concat(U.firstname, U.lastname) AS user, (SAL.basic_pay + SAL.allowances) AS gross,
+		orderSQL = (action_name == 'edit' || sort_clause.blank?)  ? "" : " ORDER BY "+ sort_clause.join(', ')
+		payroll_salaries = WkSalary.find_by_sql("SELECT S.*, concat(U.firstname, U.lastname) AS username, (SAL.basic_pay + SAL.allowances) AS gross,
 			((SAL.basic_pay + SAL.allowances) - SAL.deduction_total) AS net, WU.join_date
 			FROM wk_salaries AS S
 			INNER JOIN (
@@ -177,6 +188,12 @@ class WkpayrollController < WkbaseController
 		end	
 		form_payroll_entries(payrollAmount, userid)
 		@payrollDetails = @payrollEntries[key][:details]
+		respond_to do |format|
+			format.html {
+				render :layout => !request.xhr?
+			} 
+			format.api
+		end
 	end
 
 	def updateUserSalary
@@ -209,14 +226,14 @@ class WkpayrollController < WkbaseController
 		errorMsg = generateSalaries(userIds,salaryDate, isGeneratePayroll)
 		if to_boolean(isGeneratePayroll)
 			if errorMsg.nil?
-				redirect_to action: 'index' , tab: 'payroll'
+				#redirect_to action: 'index' , tab: 'payroll'
 				flash[:notice] = l(:notice_successful_update)		
 			elsif !errorMsg.blank? &&  errorMsg == 1			
 				flash[:notice] =  l(:label_salary) + " " +  l(:notice_successful_update) 
 				if isChecked('salary_auto_post_gl')
 					flash[:error] = l(:error_trans_msg)
 				end
-				redirect_to :action => 'index'
+				#redirect_to :action => 'index'
 			end
 		end
 		payroll_list = @payrollList
@@ -252,12 +269,11 @@ class WkpayrollController < WkbaseController
 		hUserSettingHash
 	end
 	
-    def findBySql(query)
-		result = WkSalary.find_by_sql("select count(*) as id from (" + query + ") as v2")
-	    @entry_count = result.blank? ? 0 : result[0].id
+		def findBySql(selectStr, query, orderStr)
+	    @entry_count = findCountBySql(query, WkSalary)
 	    setLimitAndOffset()		
 	    rangeStr = formPaginationCondition()	
-	    @payroll_entries = WkSalary.find_by_sql(query + rangeStr)
+	    @payroll_entries = WkSalary.find_by_sql(selectStr + query + orderStr + rangeStr)
 	end
 
 	def setLimitAndOffset		
@@ -288,8 +304,8 @@ class WkpayrollController < WkbaseController
 
 	def set_filter_session
 		session[controller_name] = {:from => @from, :to => @to} if session[controller_name].nil?
-		if params[:searchlist] == controller_name
-			filters = [:period_type, :period, :group_id, :user_id, :from, :to]
+		if params[:searchlist] == controller_name || api_request?
+			filters = [:period_type, :period, :group_id, :user_id, :from, :to, :status, :name]
 			filters.each do |param|
 				if params[param].blank? && session[controller_name].try(:[], param).present?
 					session[controller_name].delete(param)
@@ -374,50 +390,52 @@ class WkpayrollController < WkbaseController
 	def check_permission
 		ret = false
 		ret = params[:user_id].to_i == User.current.id
-		return (ret || validateERPPermission('A_TE_PRVLG'))
+		return (ret || validateERPPermission('A_PAYRL'))
 	end
 	
 	def check_admin_perm_and_redirect
-		if !params[:generate].blank? && !validateERPPermission('A_TE_PRVLG')
+		if !params[:generate].blank? && !validateERPPermission('A_PAYRL')
 			render_403
 			return false
 		end
 	end
 	
 	def check_setting_admin_perm_and_redirect
-		unless validateERPPermission('A_TE_PRVLG')
+		unless validateERPPermission('A_PAYRL')
 			render_403
 			return false
 		end
 	end
 
 	def usrsettingsindex
-		@status = params[:status] || 1
+		set_filter_session
+		@status = session[controller_name][:status] || 1
 		@groups = Group.all.sort
-		sqlStr = ""
-		selectStr = " select u.id as user_id, u.firstname, u.lastname, u.status from users u"
-		if !params[:group_id].blank?
+		group_id = session[controller_name].try(:[], :group_id)
+		sqlStr = " from users u"
+		selectStr = " select u.id as user_id, u.firstname, u.lastname, u.status "
+		if group_id.to_i != 0
 			sqlStr = sqlStr + " left join groups_users gu on u.id = gu.user_id"
 		end
 		sqlStr = sqlStr + " where u.type = 'User' "
-		if !validateERPPermission('A_TE_PRVLG')
+		if !validateERPPermission('A_PAYRL')
 			sqlStr = sqlStr + " and u.id = #{User.current.id} " 
 		end
 		if !@status.blank?
 			sqlStr = sqlStr + " and u.status = #{@status}"
 		end
-		if !params[:group_id].blank?
-			sqlStr = sqlStr + " and gu.group_id = #{params[:group_id]}"
+		if group_id.to_i != 0
+			sqlStr = sqlStr + " and gu.group_id = #{group_id}"
 		end
-		if !params[:name].blank?
-			sqlStr = sqlStr + " and (LOWER(u.firstname) like LOWER('%#{params[:name]}%') or LOWER(u.lastname) like LOWER('%#{params[:name]}%'))"
+		if !session[controller_name][:name].blank?
+			sqlStr = sqlStr + " and (LOWER(u.firstname) like LOWER('%#{session[controller_name][:name]}%') or LOWER(u.lastname) like LOWER('%#{session[controller_name][:name]}%'))"
 		end
-		sqlStr = selectStr + sqlStr
-		findBySql(sqlStr)
+		orderStr = " order by u.id"
+		findBySql(selectStr, sqlStr, orderStr)
 		@salary_components = get_salary_components
 
 		userIds = nil
-		if !validateERPPermission('A_TE_PRVLG')
+		if !validateERPPermission('A_PAYRL')
 			userIds = User.current.id
 		else
 			alluserIds = getUsersAndGroups
@@ -607,4 +625,45 @@ class WkpayrollController < WkbaseController
 		render(plain: getSalCompsByCompType(params[:component_type]))
 	end
 
+	def getPDFHeaders()
+		headers = [
+			[ l(:field_user), 30 ],
+			[ l(:field_join_date), 20 ],
+			[ l(:label_salarydate), 20 ],
+			[ l(:label_basic), 22 ],
+			[ l(:label_allowances), 22 ],
+			[ l(:label_deduction), 26 ],
+			[ l(:label_gross), 25 ],
+			[ l(:label_net), 25 ]
+		]
+	end
+
+	def getPDFcells(entry)
+		entry = entry.last
+		@basic_total ||= 0
+		@allowance_total ||= 0
+		@deduction_total ||= 0
+		@basic_total += entry[:BT] unless entry[:BT].blank?
+		@allowance_total += entry[:AT] unless entry[:AT].blank?
+		@deduction_total += entry[:DT] unless entry[:DT].blank?
+		list = [
+			[ (entry[:firstname] || "") + " " + (entry[:lastname] || ""), 30 ],
+			[ entry[:joinDate].to_s, 20 ],
+			[ entry[:salDate].to_s, 20 ],
+			[ entry[:currency].to_s + " " + ("%.2f" % entry[:BT]).to_s, 22 ],
+			[ entry[:currency].to_s + " " + ("%.2f" % entry[:AT]).to_s, 22 ],
+			[ entry[:currency].to_s + " " + ("%.2f" % entry[:DT]).to_s, 26 ],
+			[ entry[:currency].to_s + " " + ("%.2f" % ((entry[:BT].blank? ? 0 : entry[:BT]) + (entry[:AT].blank? ? 0 : entry[:AT]))).to_s, 25 ],
+			[ entry[:currency].to_s + " " + ("%.2f" % (((entry[:BT].blank? ? 0 : entry[:BT]) + (entry[:AT].blank? ? 0 : entry[:AT])) -(entry[:DT].blank? ? 0 : entry[:DT]))).to_s, 25 ]
+		]
+	end
+
+	def getPDFFooter(pdf, row_Height)
+		pdf.RDMCell( 70, row_Height, "Total", 1, 0, '', 1)
+		pdf.RDMCell( 22, row_Height, @payrollEntries.values[0][:currency] + " " + (@basic_total || 0).to_s, 1, 0, '', 1)
+		pdf.RDMCell( 22, row_Height, @payrollEntries.values[0][:currency] + " " + (@allowance_total || 0).to_s, 1, 0, '', 1)
+		pdf.RDMCell( 26, row_Height, @payrollEntries.values[0][:currency] + " " + (@deduction_total || 0).to_s, 1, 0, '', 1)
+		pdf.RDMCell( 25, row_Height, @payrollEntries.values[0][:currency] + " " + (@total_gross || 0).to_s, 1, 0, '', 1)
+		pdf.RDMCell( 25, row_Height, @payrollEntries.values[0][:currency] + " " + (@total_net || 0).to_s, 1, 0, '', 1)
+	end
 end

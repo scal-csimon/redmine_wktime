@@ -1,3 +1,20 @@
+# ERPmine - ERP for service industry
+# Copyright (C) 2011-2020  Adhi software pvt ltd
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 class WkleaverequestController < WkbaseController
   menu_item :wkattendance
   include WkleaverequestHelper
@@ -16,8 +33,8 @@ class WkleaverequestController < WkbaseController
     getUsersAndGroups
     retrieve_date_range
     lveReqEntires = WkLeaveReq.get_all
-    lveReqEntires = lveReqEntires.leaveReqSupervisor if isSupervisor && !validateERPPermission("A_TE_PRVLG")
-    lveReqEntires = lveReqEntires.leaveReqUser unless isSupervisor || validateERPPermission("A_TE_PRVLG")
+    lveReqEntires = lveReqEntires.leaveReqSupervisor if isSupervisor && !validateERPPermission("A_ATTEND")
+    lveReqEntires = lveReqEntires.leaveReqUser unless isSupervisor || validateERPPermission("A_ATTEND")
 
     lveReqEntires = lveReqEntires.leaveType(session[controller_name][:leave_type]) if session[controller_name].try(:[], :leave_type).present?
     lveReqEntires = lveReqEntires.userGroup(session[controller_name][:group_id]) if session[controller_name].try(:[], :group_id).present? && session[controller_name].try(:[], :group_id) != "0"
@@ -25,10 +42,10 @@ class WkleaverequestController < WkbaseController
     lveReqEntires = lveReqEntires.leaveReqStatus(session[controller_name][:lveStatus]) if session[controller_name].try(:[], :lveStatus).present?
     lveReqEntires = lveReqEntires.dateFilter(@from, @to) if !@from.blank? && !@to.blank?
     
-    lveReqEntires = lveReqEntires.reorder(sort_clause)
+    lveReqEntires = lveReqEntires.order("user_id ASC, start_date DESC").reorder(sort_clause)
     @leave_count = lveReqEntires.length
     @leave_pages = Paginator.new @leave_count, per_page_option, params['page']
-    @leaveReqEntires = lveReqEntires.order("user_id ASC, start_date DESC").limit(@leave_pages.per_page).offset(@leave_pages.offset).to_a
+    @leaveReqEntires = lveReqEntires.limit(@leave_pages.per_page).offset(@leave_pages.offset).to_a
   end
 
   def edit
@@ -39,8 +56,7 @@ class WkleaverequestController < WkbaseController
     end
     isCurrentUser = @leaveReqEntry.blank? || @leaveReqEntry.user_id == User.current.id
     @leaveReqStatus = @leaveReqEntry.present? ? @leaveReqEntry.try(:status) : ''
-    @readonly = ['C', 'R', 'A'].include?(@leaveReqStatus) || (@leaveReqStatus == 'S' && isCurrentUser) || 
-      (!isCurrentUser && ['N'].include?(@leaveReqStatus))
+    @readonly = ['C', 'A', 'S'].include?(@leaveReqStatus) || (!isCurrentUser && ['N', 'R'].include?(@leaveReqStatus))
   end
 
   def save
@@ -52,6 +68,7 @@ class WkleaverequestController < WkbaseController
     leaveReq.start_date = params[:start_date] if params[:start_date].present?
     leaveReq.end_date = params[:end_date] if params[:end_date].present?
     leaveReq.leave_reasons = params[:leave_reasons] if params[:leave_reasons].present?
+    leaveReq.reviewer_comment = params[:reviewer_comment] if params[:reviewer_comment].present?
 
     lveReqStatus = 'S'
     params.each do |param, val|
@@ -61,16 +78,27 @@ class WkleaverequestController < WkbaseController
     leaveReq.wkstatus_attributes = wkstatus if leaveReq.wkstatus.blank? || leaveReq.wkstatus.last.status != status
 
     if leaveReq.save
-      leaveReq = WkLeaveReq.getEntry(leaveReq.id)
-      isUser = user.id == leaveReq.user_id
-      status = getLeaveStatus[leaveReq.status]
+      leaveReqMail(leaveReq)
+    else
+      flash[:error] = leaveReq.errors.full_messages.join('<br>')
+			redirect_to action: 'edit', id: params[:id]
+    end
+  end
+
+  def leaveReqMail(leaveReq)
+    user = User.current
+    leaveReq = WkLeaveReq.getEntry(leaveReq.id)
+    isUser = user.id == leaveReq.user_id
+    status = getLeaveStatus[leaveReq.status]
+    if WkNotification.notify('leaveRequested') && leaveReq.status == 'S' || WkNotification.notify('leaveApproved') &&
+      ['A','R'].include?(leaveReq.status)
       if (leaveReq.status == 'S' && isUser) 
         email_id = leaveReq.supervisor_mail
       elsif (['A','R', 'S'].include?(leaveReq.status) && !isUser)
-        email_id = leaveReq.user.mail
+        email_id = leaveReq.user.mails
         status = "UnApproved" if leaveReq.status == 'S'
       end
-      ccMailId = leaveReq.admingroupMail - [email_id]
+      ccMailId = leaveReq.admingroupMail('leaveNotifyUser') - [email_id]
       if email_id.present?
         emailNotes = l(:label_leave_email_note).to_s + " #{status} #{l(:label_by)} " + user.name
         emailNotes += "\n\n" + "#{l(:field_user)}: " + leaveReq.user_name
@@ -80,13 +108,10 @@ class WkleaverequestController < WkbaseController
         emailNotes += "\n" + l(:label_reason).to_s + ": " + leaveReq.leave_reasons if leaveReq.leave_reasons.present?
         err_msg = sent_emails(l(:label_leave_request_notification), user.language, email_id, emailNotes, ccMailId)
       end
-			redirect_to action: 'index'
-			flash[:notice] = l(:notice_successful_update)
-      flash[:error] = err_msg if err_msg.present?
-    else
-      flash[:error] = leaveReq.errors.full_messages.join('<br>')
-			redirect_to action: 'edit', id: params[:id]
     end
+    redirect_to action: 'index' , tab: 'wkleaverequest'
+    flash[:notice] = l(:notice_successful_update)
+    flash[:error] = err_msg if err_msg.present?
   end
 	
 	def set_filter_session

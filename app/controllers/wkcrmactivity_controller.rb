@@ -1,5 +1,5 @@
 # ERPmine - ERP for service industry
-# Copyright (C) 2011-2016  Adhi software pvt ltd
+# Copyright (C) 2011-2020 Adhi software pvt ltd
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,9 +20,10 @@ class WkcrmactivityController < WkcrmController
   unloadable
   menu_item :wklead
   include WktimeHelper
+	accept_api_auth :index, :edit, :update
 
 	def index
-		sort_init 'id', 'asc'
+		sort_init 'updated_at', 'desc'
 
 		sort_update 'activity_type' => "#{WkCrmActivity.table_name}.activity_type",
 					'subject_name' => "#{WkCrmActivity.table_name}.name",
@@ -64,9 +65,15 @@ class WkcrmactivityController < WkcrmController
 		end
 		
 		formPagination(crmactivity.reorder(sort_clause))
+		respond_to do |format|
+			format.html {        
+				render :layout => !request.xhr?
+			}
+			format.api
+		end
 	end
   
-    def edit
+  def edit
 		@activityEntry = nil
 		unless params[:activity_id].blank?
 			@activityEntry = WkCrmActivity.where(:id => params[:activity_id].to_i)
@@ -74,10 +81,16 @@ class WkcrmactivityController < WkcrmController
 		isError = params[:isError].blank? ? false : to_boolean(params[:isError])
 		if !$tempActivity.blank?  && isError
 			@activityEntry = $tempActivity
+			respond_to do |format|
+				format.html {        
+					render :layout => !request.xhr?
+				}
+				format.api
+			end
 		end
-    end
+  end
   
-    def update
+  def update
 		errorMsg = nil
 		crmActivity = nil
 		@tempCrmActivity ||= Array.new
@@ -104,6 +117,10 @@ class WkcrmactivityController < WkcrmController
 		crmActivity.assigned_user_id = params[:assigned_user_id]
 		crmActivity.parent_id = params[:related_parent]
 		crmActivity.parent_type = params[:related_to].to_s
+		if isChecked('crm_save_geo_location')
+			crmActivity.latitude = params[:latitude]
+			crmActivity.longitude = params[:longitude]
+		end
 		unless crmActivity.valid?
 		@tempCrmActivity << crmActivity
 			$tempActivity = @tempCrmActivity
@@ -112,25 +129,36 @@ class WkcrmactivityController < WkcrmController
 			crmActivity.save()
 			$tempActivity = nil 
 		end
-		
-		if errorMsg.blank?
-			
-			if params[:controller_from] == 'wksupplieraccount'
-				redirect_to :controller => params[:controller_from],:action => params[:action_from] , :account_id => crmActivity.parent_id
-			elsif params[:controller_from] == 'wksuppliercontact'
-				redirect_to :controller => params[:controller_from],:action => params[:action_from] , :contact_id => crmActivity.parent_id
-			else
-				redirect_to :controller => 'wkcrmactivity',:action => 'index' , :tab => 'wkcrmactivity'
-			end
-			$tempActivity = nil			
-			flash[:notice] = l(:notice_successful_update)
-		else
-			flash[:error] = errorMsg 
-			redirect_to :controller => 'wkcrmactivity',:action => 'edit', :isError => true
+
+		respond_to do |format|
+			format.html {
+				if errorMsg.blank?
+					if params[:controller_from] == 'wksupplieraccount'
+						redirect_to :controller => params[:controller_from],:action => params[:action_from] , :account_id => crmActivity.parent_id
+					elsif params[:controller_from] == 'wksuppliercontact'
+						redirect_to :controller => params[:controller_from],:action => params[:action_from] , :contact_id => crmActivity.parent_id
+					else
+						redirect_to :controller => 'wkcrmactivity',:action => 'index' , :tab => 'wkcrmactivity'
+					end
+					$tempActivity = nil			
+					flash[:notice] = l(:notice_successful_update)
+				else
+					flash[:error] = errorMsg 
+					redirect_to :controller => 'wkcrmactivity',:action => 'edit', :isError => true
+				end
+			}
+			format.api{
+				if errorMsg.blank?
+					render :plain => errorMsg, :layout => nil
+				else			
+					@error_messages = errorMsg.split('\n')	
+					render :template => 'common/error_messages.api', :status => :unprocessable_entity, :layout => nil
+				end
+			}
 		end	
-    end
+  end
   
-    def destroy
+  def destroy
 		parentId = WkCrmActivity.find(params[:activity_id].to_i).parent_id
 		trans = WkCrmActivity.find(params[:activity_id].to_i).destroy
 		flash[:notice] = l(:notice_successful_delete)
@@ -142,12 +170,13 @@ class WkcrmactivityController < WkcrmController
 		else
 			redirect_back_or_default :action => 'index', :tab => params[:tab]
 		end
-    end
+  end
 	
 	def set_filter_session
 		session[controller_name] = {:from => @from, :to => @to} if session[controller_name].nil?
 		if params[:searchlist] == controller_name
-			filters = [:period_type, :period, :from, :to, :activity_type, :related_to, :assigned_user_id, :created_at, :updated_at]
+			filters = [:period_type, :period, :from, :to, :activity_type, :related_to, :show_on_map, :assigned_user_id, :created_at, :updated_at]
+
 			filters.each do |param|
 				if params[param].blank? && session[controller_name].try(:[], param).present?
 					session[controller_name].delete(param)
@@ -161,7 +190,7 @@ class WkcrmactivityController < WkcrmController
 	def formPagination(entries)
 		@entry_count = entries.count
         setLimitAndOffset()
-		@activity = entries.order(updated_at: :desc).limit(@limit).offset(@offset)
+		@activity = entries.limit(@limit).offset(@offset)
 	end
 	
 	def setLimitAndOffset		

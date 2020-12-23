@@ -1,8 +1,9 @@
 <%= javascript_include_tag 'index', :plugin => "redmine_wktime" %>
 <%= javascript_include_tag 'wkpayroll', :plugin => "redmine_wktime" %>
-<h2><%= l(:label_payroll) %></h2>
+<%= title l(:label_payroll) %>
 <script type="text/javascript"> 
-    wkattnIndexUrl = '<%=url_for(:controller => "wkattendance", :action => "index", :tab => "leave")%>';     
+    wkattnIndexUrl = '<%=url_for(:controller => "wkattendance", :action => "index", :tab => "leave")%>';
+   wkleavereqUrl = '<%=url_for(:controller => "wkleaverequest", :action => "index", :tab => "wkleaverequest")%>';
     clockInOutUrl = '<%=url_for(:controller => "wkattendance", :action => "clockindex", :tab => "clock")%>';
 	payrollUrl = '<%=url_for(:controller => "wkpayroll", :action => "index", :tab => "payroll")%>';
 	wkSchedulingUrl = '<%=url_for(:controller => "wkscheduling", :action => "index", :tab => "wkscheduling")%>';
@@ -12,9 +13,9 @@
 		//getMembersbyGroup
 </script>
 <%= render_tabs time_expense_tabs %>
-   <% content_for :sidebar do %>
-      <%= render :partial => 'sidebar' %>
-   <% end %>
+<div class="wk-contextual">
+	<%= render :partial => 'sidebar' %>
+</div>
 <%= hidden_field_tag 'back_url', url_for(:controller => params[:controller], :action => params[:action]) %>
 <% wktime_helper = Object.new.extend(WktimeHelper) %>
 <%= form_tag({:controller => controller_name, :action => 'index', :tap => 'payroll'}, :method => :get, :id => 'query_form') do %>
@@ -24,7 +25,7 @@
 		userid =session[:wkpayroll].try(:[], :user_id) %>	
 		<table>
 		
-			<% if wktime_helper.validateERPPermission('A_TE_PRVLG') %>
+			<% if wktime_helper.validateERPPermission('A_PAYRL') %>
 			<tr>
 			<th><%=l(:label_group_plural)%> </th>
 			<% if !@groups.blank? %>
@@ -47,15 +48,13 @@
 		<%= render :partial => 'wkpayroll/date_range' %>
 	<% end %>
 
-	<% unless @payrollEntries.blank? %>
+	<% if @payrollEntries.present? %>
 		<div class="total-hours">
 			<p><%= l(:label_total) %>: <%= @payrollEntries.values[0][:currency] %>&nbsp;<%= @total_gross %></p>
 		</div>
-	<% end %>
-<%= render :partial => 'wkpayroll/payroll_list'%>
 
+	<%= render :partial => 'wkpayroll/payroll_list'%>
 
-<% other_formats_links do |f| %>
 	<% url = "?format=csv"
 		params.each do |name, val|
 			if !['controller', 'action', 'utf8'].include?(name)
@@ -63,7 +62,10 @@
 			end
 		end
 	%>
-	<%= link_to 'CSV', url_for(:controller => controller_name, :action => 'export') + url %>	
+	<% other_formats_links do |f| %>
+		<%= link_to 'CSV', url_for(:controller => controller_name, :action => 'export') + url %> | 
+		<%= f.link_to_with_query_parameters 'PDF' %>
+	<% end %>
+<% else %>
+	<p class="nodata"><%= l(:label_no_data) %></p>
 <% end %>
-
-<% html_title(l(:label_ta)) -%>

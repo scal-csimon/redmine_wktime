@@ -1,17 +1,31 @@
+# ERPmine - ERP for service industry
+# Copyright (C) 2011-2020  Adhi software pvt ltd
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 class WkorderentityController < WkbillingController
   unloadable
-
-before_action :require_login
-
-include WktimeHelper
-include WkinvoiceHelper
-include WkbillingHelper
-include WkorderentityHelper
-include WkreportHelper
-include WkgltransactionHelper
+	include WktimeHelper
+	include WkinvoiceHelper
+	include WkbillingHelper
+	include WkorderentityHelper
+	include WkreportHelper
+	include WkgltransactionHelper
 
 	def index
-		sort_init 'id', 'asc'
+		sort_init 'invoice_date', 'desc'
 
 		sort_update 'invoice_number' => "invoice_number",
 					'invoice_date' => "invoice_date",
@@ -138,16 +152,21 @@ include WkgltransactionHelper
 				LEFT JOIN wk_accounts a on (wk_invoices.parent_type = 'WkAccount' and wk_invoices.parent_id = a.id)
 				LEFT JOIN wk_crm_contacts c on (wk_invoices.parent_type = 'WkCrmContact' and wk_invoices.parent_id = c.id)
 				").group("wk_invoices.id, CASE WHEN wk_invoices.parent_type = 'WkAccount' THEN a.name ELSE CONCAT(c.first_name, c.last_name) END,
-				CONCAT(users.firstname, users.lastname)")
+				CONCAT(users.firstname, users.lastname), wk_invoices.status, wk_invoices.invoice_number, wk_invoices.start_date, wk_invoices.end_date, wk_invoices.invoice_date, wk_invoices.closed_on, wk_invoices.modifier_id, wk_invoices.gl_transaction_id, wk_invoices.parent_id, wk_invoices.invoice_type, wk_invoices.invoice_num_key, wk_invoices.created_at, wk_invoices.updated_at,wk_invoices.parent_type ")
 				.select("wk_invoices.*, SUM(wk_invoice_items.quantity) AS quantity, SUM(wk_invoice_items.amount) AS amount, SUM(wk_invoice_items.original_amount)
 				 AS original_amt")
 			formPagination(invEntries.reorder(sort_clause))
-
 			unless @previewBilling
 				amounts = @invoiceEntries.reorder(["wk_invoices.id ASC"]).pluck("SUM(wk_invoice_items.amount)")
 				@totalInvAmt = amounts.compact.inject(0, :+)
 			end
-		end
+			respond_to do |format|
+				format.html {        
+				  render :layout => !request.xhr?
+				}
+				format.api
+			end
+		end		
 	end	
 	
 	def edit
@@ -243,6 +262,18 @@ include WkgltransactionHelper
 	end
 	
 	def update
+		if api_request?
+			row_index =0
+			params['invoiceItems'].each do |index, data|
+				if data['hd_item_type'] != 't' && data['hd_item_type'] != 'r'
+					row_index = row_index+1
+					data.each do | item |
+						params[item.first + (row_index).to_s] = item.last					
+					end
+				end
+			end
+			params['totalrow'] = row_index
+		end
 		errorMsg = nil
 		invoiceItem = nil
 		unless params["invoice_id"].blank?
@@ -252,7 +283,7 @@ include WkgltransactionHelper
 		else
 			@invoice = WkInvoice.new
 			invoicePeriod = getInvoicePeriod(params[:inv_start_date], params[:inv_end_date])#[params[:inv_start_date], params[:inv_end_date]]
-			saveOrderInvoice(params[:parent_id], params[:parent_type],  params[:project_id1],params[:inv_date],  invoicePeriod, false, getInvoiceType)
+			saveOrderInvoice(params[:parent_id], params[:parent_type],  params[:project_id_1],params[:inv_date],  invoicePeriod, false, getInvoiceType)
 			
 		end
 		@invoice.status = params[:field_status] unless params[:field_status].blank?
@@ -274,46 +305,46 @@ include WkgltransactionHelper
 		#for i in 1..totalRow
 		while savedRows < totalRow
 			i = savedRows + deletedRows + 1
-			if params["item_id#{i}"].blank? && params["quantity#{i}"].blank? #&& params["project_id#{i}"].blank?
+			if params["item_id_#{i}"].blank? && params["quantity_#{i}"].blank? #&& params["project_id#{i}"].blank?
 				deletedRows = deletedRows + 1
 				next
 			end
 			crInvoiceId = nil
 			crPaymentId = nil
-			if params["creditfrominvoice#{i}"] == "true"
-				crInvoiceId = params["entry_id#{i}"].to_i
-			elsif params["creditfrominvoice#{i}"] == "false"
-				crPaymentId = params["entry_id#{i}"].to_i
+			if params["creditfrominvoice_#{i}"] == "true"
+				crInvoiceId = params["entry_id_#{i}"].to_i
+			elsif params["creditfrominvoice_#{i}"] == "false"
+				crPaymentId = params["entry_id_#{i}"].to_i
 			end
-			pjtId = params["project_id#{i}"] if !params["project_id#{i}"].blank?
-			itemType = params["item_type#{i}"].blank? ? params["hd_item_type#{i}"]  : params["item_type#{i}"]
-			unless params["item_id#{i}"].blank?			
-				arrId.delete(params["item_id#{i}"].to_i)
-				invoiceItem = WkInvoiceItem.find(params["item_id#{i}"].to_i)
-				org_amount = params["rate#{i}"].to_f * params["quantity#{i}"].to_f
-				updatedItem = updateInvoiceItem(invoiceItem, pjtId,  params["name#{i}"], params["rate#{i}"].to_f, params["quantity#{i}"].to_f, invoiceItem.original_currency, itemType, org_amount, crInvoiceId, crPaymentId, params["product_id#{i}"])
+			pjtId = params["project_id_#{i}"] if !params["project_id_#{i}"].blank?
+			itemType = params["item_type_#{i}"].blank? ? params["hd_item_type_#{i}"]  : params["item_type_#{i}"]
+			unless params["item_id_#{i}"].blank?			
+				arrId.delete(params["item_id_#{i}"].to_i)
+				invoiceItem = WkInvoiceItem.find(params["item_id_#{i}"].to_i)
+				org_amount = params["rate_#{i}"].to_f * params["quantity_#{i}"].to_f
+				updatedItem = updateInvoiceItem(invoiceItem, pjtId,  params["name_#{i}"], params["rate_#{i}"].to_f, params["quantity_#{i}"].to_f, invoiceItem.original_currency, itemType, org_amount, crInvoiceId, crPaymentId, params["product_id_#{i}"])
 			else				
 				invoiceItem = @invoice.invoice_items.new
-				org_amount = params["rate#{i}"].to_f * params["quantity#{i}"].to_f
-				updatedItem = updateInvoiceItem(invoiceItem, pjtId, params["name#{i}"], params["rate#{i}"].to_f, params["quantity#{i}"].to_f, params["original_currency#{i}"], itemType, org_amount, crInvoiceId, crPaymentId, params["product_id#{i}"])
+				org_amount = params["rate_#{i}"].to_f * params["quantity_#{i}"].to_f
+				updatedItem = updateInvoiceItem(invoiceItem, pjtId, params["name_#{i}"], params["rate_#{i}"].to_f, params["quantity_#{i}"].to_f, params["original_currency_#{i}"], itemType, org_amount, crInvoiceId, crPaymentId, params["product_id_#{i}"])
 			end
-			if !params[:populate_unbilled].blank? && params[:populate_unbilled] == "true" && params[:creditfrominvoice].blank? && !params["entry_id#{i}"].blank?
+			if !params[:populate_unbilled].blank? && params[:populate_unbilled] == "true" && params[:creditfrominvoice].blank? && !params["entry_id_#{i}"].blank?
 				accProject = WkAccountProject.where(:project_id => pjtId)
 				if accProject[0].billing_type == 'TM'
-					idArr = params["entry_id#{i}"].split(' ')
+					idArr = params["entry_id_#{i}"].split(' ')
 					idArr.each do | id |
 						timeEntry = TimeEntry.find(id)
 						updateBilledEntry(timeEntry, updatedItem.id)
 					end
-				elsif !params["entry_id#{i}"].blank?
-					scheduledEntry = WkBillingSchedule.find(params["entry_id#{i}"].to_i)
+				elsif !params["entry_id_#{i}"].blank?
+					scheduledEntry = WkBillingSchedule.find(params["entry_id_#{i}"].to_i)
 					scheduledEntry.invoice_id = @invoice.id
 					scheduledEntry.save()
 				end
 				
 			end
-			unless params["material_id#{i}"].blank?
-				matterialEntry = WkMaterialEntry.find(params["material_id#{i}"].to_i)
+			unless params["material_id_#{i}"].blank?
+				matterialEntry = WkMaterialEntry.find(params["material_id_#{i}"].to_i)
 				updateBilledEntry(matterialEntry, updatedItem.id)
 				# matterialEntry.invoice_item_id = updatedItem.id
 				# matterialEntry.save
@@ -321,13 +352,13 @@ include WkgltransactionHelper
 			savedRows = savedRows + 1
 			tothash[updatedItem.project_id] = [(tothash[updatedItem.project_id].blank? ? 0 : tothash[updatedItem.project_id][0]) + updatedItem.original_amount, updatedItem.original_currency] if updatedItem.item_type != 'm'
 			
-			unless params["product_id#{i}"].blank?
-				productId = params["product_id#{i}"]
+			unless params["product_id_#{i}"].blank?
+				productId = params["product_id_#{i}"]
 				productEntry = WkProduct.find(productId)
 				projEntry = Project.find(pjtId)
 				productName = productEntry.name
-				amount = params["rate#{i}"].to_f * params["quantity#{i}"].to_f
-				curr = params["currency#{i}"]
+				amount = params["rate_#{i}"].to_f * params["quantity_#{i}"].to_f
+				curr = params["currency_#{i}"]
 				productArr << productId 
 				if @matterialVal.has_key?("#{productId}")
 					oldAmount = @matterialVal["#{productId}"]["amount"].to_i
@@ -364,8 +395,10 @@ include WkgltransactionHelper
 			moduleAmtHash = {'inventory' => [nil, totalAmount.round(2) - invoiceAmount.round(2)], getAutoPostModule => [totalAmount.round(2), invoiceAmount.round(2)]}
 			inverseModuleArr = ['inventory']
 			transAmountArr = getTransAmountArr(moduleAmtHash, inverseModuleArr)
-			if (totalAmount.round(2) - totalAmount) != 0
-				add.roundInvItem(totalAmount)
+
+			if isChecked("invoice_auto_round_gl") && (totalAmount.round(2) - totalAmount) != 0
+				#add.roundInvItem(totalAmount)
+				addRoundInvItem(totalAmount)
 			end
 			if totalAmount > 0 && autoPostGL(getAutoPostModule) && postableInvoice
 				transId = @invoice.gl_transaction.blank? ? nil : @invoice.gl_transaction.id
@@ -377,13 +410,25 @@ include WkgltransactionHelper
 			end
 		end
 		
-		if errorMsg.nil? 
-			redirect_to :action => 'index' , :tab => controller_name
-			flash[:notice] = l(:notice_successful_update)
-	   else
-			flash[:error] = errorMsg
-			redirect_to :action => 'edit', :invoice_id => @invoice.id
-	   end
+		respond_to do |format|
+			format.html {
+				if errorMsg.nil? 
+					redirect_to :action => 'index' , :tab => controller_name
+					flash[:notice] = l(:notice_successful_update)
+				else
+						flash[:error] = errorMsg
+						redirect_to :action => 'edit', :invoice_id => @invoice.id
+				end
+			}
+			format.api{
+				if errorMsg.blank?
+					render :plain => errorMsg, :layout => nil
+				else		
+					@error_messages = errorMsg.split('\n')	
+					render :template => 'common/error_messages.api', :status => :unprocessable_entity, :layout => nil
+				end
+			}
+		end
 	end
 	
 	def getHeaderLabel
@@ -425,7 +470,7 @@ include WkgltransactionHelper
 	
   	def set_filter_session
 			session[controller_name] = {:from => @from, :to => @to} if session[controller_name].nil?
-		if params[:searchlist] == controller_name
+		if params[:searchlist] == controller_name || api_request?
 			filters = [:period_type, :period, :from, :to, :contact_id, :account_id, :project_id, :polymorphic_filter, :rfq_id]
 			filters.each do |param|
 				if params[param].blank? && session[controller_name].try(:[], param).present?
@@ -497,6 +542,154 @@ include WkgltransactionHelper
 	
 	def showProjectDD
 		false
+	end
+
+	def getInvProj
+		@projectsDD = Array.new
+		@invList = Hash.new{|hsh,key| hsh[key] = {} }
+		if !params[:new_invoice].blank? && params[:new_invoice] == "true"
+			newOrderEntity(params[:parent_id], params[:parent_type])
+		end
+		editOrderEntity
+		invProj = []	
+		invProj = @projectsDD.map { |name, id| { value: id, label:  name }} if @projectsDD.present?
+		render json: invProj
+	end
+
+	def export
+		unless params[:invoice_id].blank?
+			@projectsDD = Array.new
+			editOrderEntity
+		end
+		respond_to do |format|
+			format.pdf {
+				send_data(invoice_to_pdf(@invoice), type: 'application/pdf', filename: "#{getHeaderLabel}.pdf")
+			}
+		end
+	end
+
+	def invoice_to_pdf(invoice)
+		title = getHeaderLabel
+		pdf = ITCPDF.new(current_language)
+		pdf.SetTitle(title)
+		pdf.add_page
+		page_width    = pdf.get_page_width
+		left_margin   = pdf.get_original_margins['left']
+		right_margin  = pdf.get_original_margins['right']
+		table_width = page_width - right_margin - left_margin
+		pdf.SetFontStyle('B',13)
+		pdf.RDMMultiCell(table_width, 5, title, 0, 'C')
+		
+		logo = WkLocation.getMainLogo()
+		if logo.present?
+			pdf.Image(logo.diskfile.to_s, page_width-50, 15, 30, 25)
+		end
+		pdf.ln(25)	
+
+		invoiceDetails = [l(:label_name_address_of,l(:label_supplier)), l(:label_name_address_of,l(:label_customer)),
+			l(:label_invoice_number), l(:label_invoice_date) ]
+		width = table_width/invoiceDetails.size 
+		invoiceDetails.each do |detail|
+			pdf.SetFontStyle('',10)
+			pdf.set_fill_color(230, 230, 230)
+			pdf.RDMMultiCell(width, 15, detail, 1, 'C', 1, 0)
+		end
+		pdf.ln(15)
+		pdf.set_fill_color(255, 255, 255)
+		pdf.RDMMultiCell(width, 30, getSupplierAddress(invoice), 1, 'L', 0, 0)
+		pdf.RDMMultiCell(width, 30, getCustomerAddress(invoice), 1, 'L', 0, 0)
+		pdf.RDMMultiCell(width, 30, invoice.invoice_number, 1, 'L', 0, 0)
+		pdf.RDMMultiCell(width, 30, format_date(invoice.invoice_date), 1, 'L', 0, 0)
+		pdf.ln(30)
+
+		pdf.SetFontStyle('B',10)
+		pdf.ln
+		pdf.RDMCell(130, 5, l(:label_cntrt_purchase_work_order), 1, 0, '', 1)
+		pdf.RDMCell(table_width - 130, 5, l(:label_period), 1, 0, '', 1)
+		pdf.ln
+		pdf.SetFontStyle('',10)
+		pdf.RDMMultiCell(130, 10, getOrderContract(invoice) || '', 1, 'L', 0, 0)
+		pdf.RDMMultiCell(table_width - 130, 10, format_date(invoice.start_date) + ' to ' + format_date(invoice.end_date), 1, 'L', 0, 0)
+		
+		pdf.ln(10)
+		pdf.SetFontStyle('B',13)
+		pdf.RDMCell(50, 15, getItemLabel)
+		pdf.ln
+		pdf.SetFontStyle('',10)
+		pdf.set_fill_color(230, 230, 230)
+		pdf.RDMCell(80, 10, l(:label_invoice_name), 1, 0, 'C', 1)
+		headerList = [l(:label_billing_type), l(:label_rate), l(:label_quantity), l(:label_wk_currency), l(:field_amount)]
+		columnWidth = (table_width - 80)/headerList.size
+		headerList.each do |header|
+			pdf.RDMCell(columnWidth, 10, header, 1, 0, 'C', 1)
+		end
+		pdf.set_fill_color(255, 255, 255)
+		invoice.invoice_items.where.not(:item_type => 'r').each do |entry|
+			listItem(pdf, entry, columnWidth)
+		end
+		listTotal(pdf, columnWidth, invoice.invoice_items.where.not(:item_type => 'r'))
+		roundoffItem = invoice.invoice_items.where(:item_type => 'r')
+		unless roundoffItem.blank?
+			roundoffItem.each do |entry|
+				listItem(pdf, entry, columnWidth)
+			end
+			listTotal(pdf, columnWidth, invoice.invoice_items)
+		end
+		pdf.ln(5)
+		pdf.SetFontStyle('B',10)
+		pdf.RDMCell(40, 5, l(:label_amount_in_words) + "  :  ", 1)
+		pdf.SetFontStyle('',10)
+		pdf.RDMCell(table_width - 40, 5, numberInWords(invoice.invoice_items.sum(:original_amount)) + " " + l(:label_only), 1)
+		pdf.ln(15)
+		pdf.SetFontStyle('B',10)
+		pdf.RDMCell(30, 5, l(:label_place) + "  :  ", 0)
+		pdf.ln
+		pdf.RDMCell(30, 5, l(:label_date) + "  :  ", 0)
+		pdf.RDMCell(table_width-30, 5, l(:label_authorized_signatory), 0, 0, 'R')
+		pdf.Output
+	end
+
+	def listItem(pdf, entry, columnWidth)
+		height = pdf.get_string_height(80, entry.name)
+		pdf.SetFontStyle('',10)
+		pdf.ln
+		pdf.RDMMultiCell(80, height, entry.name, 1, 'L', 0, 0)
+		pdf.RDMCell(columnWidth, height, getInvoiceItemType(entry.item_type), 1, 0, 'L')
+		pdf.RDMCell(columnWidth, height, entry.item_type == 't' ? entry.rate.to_s + "%" : entry.rate.to_s, 1, 0, 'R')
+		pdf.RDMCell(columnWidth, height, entry.quantity.to_s, 1, 0, 'R')
+		pdf.RDMCell(columnWidth, height, entry.original_currency.to_s, 1, 0, 'R')
+		pdf.RDMCell(columnWidth, height, entry.original_amount.to_s, 1, 0, 'R')
+	end
+
+	def listTotal(pdf, columnWidth, invoice)
+		pdf.ln
+		pdf.SetFontStyle('B',10)
+		pdf.RDMCell(80, 5, '', 0, 0, 'L')
+		pdf.RDMCell(columnWidth, 5, '', 0, 0, 'L')
+		pdf.set_fill_color(230, 230, 230)
+		pdf.RDMCell(columnWidth, 5, l(:label_total), 'L', 0, 'C',1)
+		pdf.RDMCell(columnWidth, 5, invoice.sum(:quantity).to_s, 0, 0, 'R',1)
+		pdf.RDMCell(columnWidth, 5, invoice.first.original_currency.to_s, 0, 0, 'R',1)
+		pdf.RDMCell(columnWidth, 5, invoice.sum(:original_amount).to_s, 0, 0, 'R',1)
+		pdf.set_fill_color(255, 255, 255)
+	end
+
+	def getInvoiceItemType(type)
+		itemtype  = ''
+		case(type)
+		when 'i'
+			itemtype = l(:label_invoice)
+		when 'c'
+			itemtype = l(:label_credit)
+		when 'm'
+			itemtype = l(:label_material)
+		when 't'
+			itemtype = l(:label_tax)
+		when 'a'
+			itemtype = l(:label_rental)
+		else
+			itemtype = '';
+		end
 	end
 	
 end

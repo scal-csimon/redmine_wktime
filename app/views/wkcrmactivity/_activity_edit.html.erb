@@ -1,7 +1,7 @@
 <%= javascript_include_tag 'crmactivity', :plugin => "redmine_wktime" %>
 <%= javascript_include_tag 'index', :plugin => "redmine_wktime" %>
 <script type="text/javascript"> 
-	actRelatedUrl="<%= "#{url_for(:controller => "wkcrm", :action => 'getActRelatedIds', :additionalContactType => controller.additionalContactType)}" %>";
+	actRelatedUrl="<%= "#{url_for(:controller => "wkcrm", :action => 'getActRelatedIds', :additionalContactType => controller.additionalContactType, :additionalAccountType => controller.additionalAccountType)}" %>";
 	relatedUrlForLink = "<%= "#{url_for(:controller => "wkcrm", :action => 'getActRelatedUrl')}" %>";
 </script>
 <%
@@ -23,16 +23,16 @@
 		accountType = 'S'
 	end
 %>
-<%	accArr = options_for_wktime_account(false, accountType)
+<%	accArr = options_for_wktime_account(false, accountType, controller.additionalAccountType)
 	if !@activityEntry.blank?
 		entityType = @activityEntry[0].parent_type == 'WkCrmContact' ? contactType : accountType
-		accArr = relatedValues(@activityEntry[0].parent_type, @activityEntry[0].parent_id, entityType, false, controller.additionalContactType)	
+		accArr = relatedValues(@activityEntry[0].parent_type, @activityEntry[0].parent_id, entityType, false, controller.additionalContactType, controller.additionalAccountType)	
     elsif !params[:parentType].blank?
 		entityType = params[:parentType] == 'WkCrmContact' ? contactType : accountType 
-		accArr = relatedValues(params[:parentType], params[:parentId], entityType, false, controller.additionalContactType)
+		accArr = relatedValues(params[:parentType], params[:parentId], entityType, false, controller.additionalContactType, controller.additionalAccountType)
 	end	
  %>
-<%= form_tag({:controller => 'wkcrmactivity', :action => 'update'}, :method => :get, :id => 'query_form') do %>
+<%= form_tag({:controller => 'wkcrmactivity', :action => 'update'}, :method => :post, :id => 'query_form') do %>
 
 <fieldset class="box tabular">
 	<legend><%= l(:field_activity) + " " + l(:label_information) %></legend>
@@ -132,11 +132,27 @@
 		
 	</table>
 </fieldset>
+<!-- For  CRM Geolocation -->
+		<% 
+			showMap = false if showMap.blank?
+			showDefault = false if showDefault.blank? 
+		%>
+		<% if isChecked('crm_save_geo_location') %>
+				<% 	locations = [[@activityEntry && @activityEntry[0].try(:longitude) || "", @activityEntry && @activityEntry[0].try(:latitude) || ""]]
+						locations = [["", ""]] if locations.length == 0
+				%>
+			<div style="padding-left: 10px;">
+				<div id='mapContainer' style="width:300px;height:300px;"></div>
+				<%= render partial: "wkgeolocation/location_map", locals: { locations: locations } %>
+			</div>
+		<% end %>
+	</div>
 
 	<div>
 		<%= submit_tag l(:button_save) ,:id => 'wkactivity_save'%>
 	</div>
 	
+
 	<% end %>
 
 <script type="text/javascript"> 
@@ -150,3 +166,4 @@
 
 
 </script>
+

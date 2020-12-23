@@ -3,6 +3,7 @@ require_dependency 'custom_fields_helper'
 require_dependency '../lib/redmine/menu_manager'
 require 'fileutils'
 require 'timelogcontroller_patch'
+require 'contextMenusController_patch'
 require 'time_report_patch'
 require_dependency 'queries_helper_patch'
 require 'userscontroller_patch'
@@ -33,16 +34,24 @@ Project.class_eval do
 	#has_many :parents, through: :account_projects
 	has_one :wk_project, :dependent => :destroy, :class_name => 'WkProject'
 	def erpmineproject
-			self.wk_project ||= WkProject.new(:project => self)
+		self.wk_project ||= WkProject.new(:project => self)
 	end	
 end
-
 
 TimeEntry.class_eval do
   has_one :spent_for, as: :spent, class_name: 'WkSpentFor', :dependent => :destroy
   has_one :invoice_item, through: :spent_for
-  
-  accepts_nested_attributes_for :spent_for
+	has_one :wkstatus, as: :status_for, class_name: "WkStatus", dependent: :destroy
+  has_many :attachments, -> {where(container_type: "TimeEntry")}, class_name: "Attachment", foreign_key: "container_id", dependent: :destroy
+	accepts_nested_attributes_for :spent_for, :attachments
+
+  def attachments_editable?(user=User.current)
+    true
+	end
+
+  def attachments_deletable?(user=User.current)
+    true
+  end
 end
 
 # redmine only differs between project_menu and application_menu! but we want to display the
@@ -64,7 +73,7 @@ module Redmine::MenuManager::MenuHelper
     if project && !project.new_record?
       :project_menu
     else
-	  controllerArr = ["wktime", "wkexpense", "wkattendance", "wkreport", "wkpayroll",  "wkinvoice", "wkcrmaccount", "wkcontract", "wkaccountproject", "wktax", "wkgltransaction", "wkledger", "wklead", "wkopportunity", "wkcrmactivity", "wkcrmcontact", "wkcrmenumeration", "wkpayment", "wkexchangerate","wkpurchase","wkrfq","wkquote","wkpurchaseorder","wksupplierinvoice","wksupplierpayment","wksupplieraccount","wksuppliercontact", "wklocation", "wkproduct", "wkbrand", "wkattributegroup" , "wkproductitem", "wkshipment", "wkunitofmeasurement", "wkasset", "wkassetdepreciation", "wkgrouppermission", "wkscheduling", "wkshift", "wkpublicholiday", "wkdashboard", "wksurvey", "wkleaverequest", "wkdocument"]
+	  controllerArr = ["wktime", "wkexpense", "wkattendance", "wkreport", "wkpayroll",  "wkinvoice", "wkcrmaccount", "wkcontract", "wkaccountproject", "wktax", "wkgltransaction", "wkledger", "wklead", "wkopportunity", "wkcrmactivity", "wkcrmcontact", "wkcrmenumeration", "wkpayment", "wkexchangerate","wkpurchase","wkrfq","wkquote","wkpurchaseorder","wksupplierinvoice","wksupplierpayment","wksupplieraccount","wksuppliercontact", "wklocation", "wkproduct", "wkbrand", "wkattributegroup" , "wkproductitem", "wkshipment", "wkunitofmeasurement", "wkasset", "wkassetdepreciation", "wkgrouppermission", "wkscheduling", "wkshift", "wkpublicholiday", "wkdashboard", "wksurvey", "wkleaverequest", "wkdocument", "wknotification"]
 	  externalMenus = call_hook :external_erpmine_menus
 	   externalMenus = externalMenus.split(' ')
 	  unless externalMenus.blank?
@@ -95,7 +104,7 @@ module ProjectsControllerPatch
 				@project.safe_attributes = params[:project]
 			
 				if @project.save
-					# ============= ERPmine_patch Redmine 4.0 =====================
+					# ============= ERPmine_patch Redmine 4.1.1 =====================
 					 @project.erpmineproject.safe_attributes = params[:erpmineproject]
 					 @project.erpmineproject.save
 					# =============================
@@ -125,7 +134,7 @@ module ProjectsControllerPatch
 			def update
 				@project.safe_attributes = params[:project]
 				if @project.save
-					# ============= ERPmine_patch Redmine 4.0 =====================
+					# ============= ERPmine_patch Redmine 4.1.1 =====================
 					 @project.erpmineproject.safe_attributes = params[:erpmineproject]
 					 @project.erpmineproject.save
 					# =============================
@@ -150,7 +159,7 @@ module ProjectsControllerPatch
 		  def destroy	
 			 @project_to_destroy = @project
 				if api_request? || params[:confirm]
-				# ============= ERPmine_patch Redmine 4.0 =====================
+				# ============= ERPmine_patch Redmine 4.1.1 =====================
 					wktime_helper = Object.new.extend(WktimeHelper)
 					ret = wktime_helper.getStatus_Project_Issue(nil,@project_to_destroy.id)			
 					if ret
@@ -186,14 +195,14 @@ module IssuesControllerPatch
 		time_entries = TimeEntry.where(:issue_id => issues_and_descendants_ids)
 		@hours = time_entries.sum(:hours).to_f
 		
-		# ============= ERPmine_patch Redmine 4.0 =====================
+		# ============= ERPmine_patch Redmine 4.1.1 =====================
 		expense_entries = WkExpenseEntry.where(:issue_id => issues_and_descendants_ids)
 		@amount = expense_entries.sum(:amount).to_f
 		# =============================================================
 
 		if @hours > 0 || @amount > 0 # added check for expense entry
 			
-		  # ============= ERPmine_patch Redmine 4.0 =====================
+		  # ============= ERPmine_patch Redmine 4.1.1 =====================
 		  # Check for the submitted or approve time and expense entries
 		  # show error message when there is a submitted time or expense entry
 		  # if part wrote by us and else part has expense destroy wrote by us
@@ -215,7 +224,7 @@ module IssuesControllerPatch
 				else
 					time_entries.update_all(:issue_id => nil)
 					
-					# ============= ERPmine_patch Redmine 4.0 ===========
+					# ============= ERPmine_patch Redmine 4.1.1 ===========
 					expense_entries.update_all(:issue_id => nil)
 					# ==============================================
 				end
@@ -230,7 +239,7 @@ module IssuesControllerPatch
 				else
 				  time_entries.update_all(:issue_id => reassign_to.id, :project_id => reassign_to.project_id)
 				  
-				  # ============= ERPmine_patch Redmine 4.0 ===========
+				  # ============= ERPmine_patch Redmine 4.1.1 ===========
 					expense_entries.update_all(:issue_id => reassign_to.id, :project_id => reassign_to.project_id)
 				  # ==============================================
 				end
@@ -261,6 +270,7 @@ CustomFieldsHelper.send(:include, WktimeHelperPatch)
 ProjectsController.send(:include, ProjectsControllerPatch)
 IssuesController.send(:include, IssuesControllerPatch)
 TimelogController.send(:include, TimelogControllerPatch)
+ContextMenusController.send(:include, ContextMenusControllerPatch)
 UsersController.send(:include, UsersControllerPatch)
 
 # Patches for Supervisor
@@ -285,13 +295,13 @@ module FttePatch
 
       base.class_eval do
 				def allowed_to?(action, context, options={}, &block)
-					# ======= ERPmine_patch Redmine 4.0 ==========
+					# ======= ERPmine_patch Redmine 4.1.1 ==========
 					wktime_helper = Object.new.extend(WktimeHelper)
 					valid_ERP_perm = wktime_helper.validateERPPermission('A_TE_PRVLG')
 					isSupervisor = wktime_helper.isSupervisor
 					# =============================
 					if context && context.is_a?(Project)
-						# ======= ERPmine_patch Redmine 4.0 for allow supervisor and TEadmin to view time_entry ==========
+						# ======= ERPmine_patch Redmine 4.1.1 for allow supervisor and TEadmin to view time_entry ==========
 						if ((valid_ERP_perm || isSupervisor) && action.to_s == 'view_time_entries') && wktime_helper.overrideSpentTime
 						return true
 						end
@@ -325,15 +335,19 @@ module FttePatch
 						# Admin users are always authorized
 						return true if admin?
 						
-						# ======= ERPmine_patch Redmine 4.0 ==========
+						# ======= ERPmine_patch Redmine 4.1.1 ==========
 						if ((valid_ERP_perm || isSupervisor) && action.to_s == 'view_time_entries') && wktime_helper.overrideSpentTime
-						return true
+							return true
+						end
+						# User Log API
+						if( action.is_a?(Hash) && action[:controller] == "wklogmaterial" && action[:action] == "index")
+							return true
 						end
 						# =============================
 						# authorize if user has at least one role that has this permission
 						roles = self.roles.to_a | [builtin_role]
 						roles.any? {|role|
-						# ======= ERPmine_patch Redmine 4.0 ==========
+						# ======= ERPmine_patch Redmine 4.1.1 ==========
 						if (action.to_s == 'view_time_entries') && wktime_helper.overrideSpentTime
 							(role.allowed_to?(:log_time) || role.allowed_to?(:edit_time_entries) || role.allowed_to?(:edit_own_time_entries))
 						else
@@ -356,7 +370,7 @@ module FttePatch
 		
 		base.class_eval do
 			def editable_by?(usr)
-				# === ERPmine_patch Redmine 4.0 for supervisor edit =====
+				# === ERPmine_patch Redmine 4.1.1 for supervisor edit =====
 				wktime_helper = Object.new.extend(WktimeHelper)
 				if ((!user.blank? && wktime_helper.isSupervisorForUser(user.id)) && wktime_helper.canSupervisorEdit)
 					true
@@ -381,14 +395,14 @@ module FttePatch
 				if allowed
 					true
 				else
-				# ============= ERPmine_patch Redmine 4.0 =====================
+				# ============= ERPmine_patch Redmine 4.1.1 =====================
 							wktime_helper = Object.new.extend(WktimeHelper)
 							# isSupervisor = wktime_helper.isSupervisor
 				# =============================
 					if @project && @project.archived?
 						@archived_project = @project
 						render_403 :message => :notice_not_authorized_archived_project
-				# ============= ERPmine_patch Redmine 4.0 =====================
+				# ============= ERPmine_patch Redmine 4.1.1 =====================
 					elsif ((action == 'edit' || action == 'update' || action == 'destroy') && ctrl == 'timelog' && (wktime_helper.isSupervisor && wktime_helper.canSupervisorEdit)) && wktime_helper.overrideSpentTime
 						true
 					elsif ((action == 'index' || action == 'report')  && ctrl == 'timelog') && wktime_helper.overrideSpentTime
@@ -499,7 +513,7 @@ module FttePatch
 					where(getSupervisorCondStr)
 			end
 		
-			#========= ERPmine_patch Redmine 4.0 for get supervision condition string ======
+			#========= ERPmine_patch Redmine 4.1.1 for get supervision condition string ======
 			def getSupervisorCondStr
 				orgCondStatement = statement
 				condStatement = orgCondStatement
@@ -603,20 +617,13 @@ Redmine::Plugin.register :redmine_wktime do
   name 'ERPmine'
   author 'Adhi Software Pvt Ltd'
   description 'ERPmine is an ERP for Service Industries. It has the following modules: Time & Expense, Attendance, Payroll, CRM, Billing, Accounting, Purchasing, Inventory, Asset , Reports, Dashboards and Survey'
-  version '3.9.1'
+  version '4.1'
   url 'http://www.redmine.org/plugins/wk-time'
   author_url 'http://www.adhisoftware.co.in/'
   
   settings(:partial => 'settings',
            :default => {
-             'wktime_project_dd_width' => '150',
-             'wktime_issue_dd_width' => '250',
-             'wktime_actv_dd_width' => '75',
 			 'wktime_closed_issue_ind' => '0',
-			 'wktime_restr_min_hour' => '0',
-			 'wktime_min_hour_day' => '0',
-			 'wktime_restr_max_hour' => '0',
-			 'wktime_max_hour_day' => '8',
 			 'wktime_page_width' => '210',
 			 'wktime_page_height' => '297',
 			 'wktime_margin_top' => '20',
@@ -624,7 +631,6 @@ Redmine::Plugin.register :redmine_wktime do
 			 'wktime_margin_left' => '10',
 			 'wktime_margin_right' => '10',
 			 'wktime_line_space' => '4',
-			 'wktime_header_logo' => 'logo.jpg',
 			 'wktime_work_time_header' => '0',
 			 'wktime_allow_blank_issue' => '0',
 			 'wktime_enter_comment_in_row' => '1',
@@ -634,13 +640,9 @@ Redmine::Plugin.register :redmine_wktime do
 			 'wktime_submission_ack' => 'I Acknowledge that the hours entered are accurate to the best of my knowledge',
 			 'wktime_enter_cf_in_row1' => '0',
 			 'wktime_enter_cf_in_row2' => '0',
-			 'wktime_enter_issue_as' =>'0',
 			 'wktime_own_approval' => '0',
 			 'wktime_previous_template_week' => '1',
 			 'wkexpense_issues_filter_tracker' => ['0'],
-			 'wktime_issues_filter_tracker' => ['0'],
-			 'wktime_allow_user_filter_tracker' => '0',
-			 'wktime_nonsub_mail_notification' => '0',
 			 'wktime_nonsub_mail_message' => 'You are receiving this notification for timesheet non submission',
 			 'wktime_submission_deadline' => '0',			
 			 'wktime_nonsub_sch_hr' => '23',
@@ -653,9 +655,7 @@ Redmine::Plugin.register :redmine_wktime do
 			 'wktime_paid_leave_accrual' => '0',
 			 'wktime_leave_accrual_after' => '0',
 			 'wktime_default_work_time' => '8',
-			 'wktime_restr_max_hour_week' => '0',
 			 'wktime_max_hour_week' => '0',
-			 'wktime_restr_min_hour_week' => '0',
 			 'wktime_min_hour_week' => '0',
 			 'wktime_enable_time_module' => '1',
 			 'wktime_enable_expense_module' => '1',
@@ -745,7 +745,7 @@ Redmine::Plugin.register :redmine_wktime do
 end
 Rails.configuration.to_prepare do
 	if ActiveRecord::Base.connection.table_exists? "#{Setting.table_name}"
-		if (!Setting.plugin_redmine_wktime['wktime_nonsub_mail_notification'].blank? && Setting.plugin_redmine_wktime['wktime_nonsub_mail_notification'].to_i == 1)
+		if ActiveRecord::Base.connection.table_exists?("#{WkNotification.table_name}") && WkNotification.notify('nonSubmission')
 		require 'rufus/scheduler'
 			if (!Setting.plugin_redmine_wktime['wktime_use_approval_system'].blank? && Setting.plugin_redmine_wktime['wktime_use_approval_system'].to_i == 1)
 				submissionDeadline = Setting.plugin_redmine_wktime['wktime_submission_deadline']
@@ -952,15 +952,15 @@ Rails.configuration.to_prepare do
 end
 
 class WktimeHook < Redmine::Hook::ViewListener
-	def controller_timelog_edit_before_save(context={ })	
-		wktime_helper = Object.new.extend(WktimeHelper)	
-		if !context[:time_entry].hours.blank? && !context[:time_entry].activity_id.blank?				
-			status = wktime_helper.getTimeEntryStatus(context[:time_entry].spent_on,context[:time_entry].user_id)		
-			if !status.blank? && ('a' == status || 's' == status || 'l' == status)					
-				 raise "#{l(:label_warning_wktime_time_entry)}"
-			end			
-		end
-	end
+	# def controller_timelog_edit_before_save(context={ })	
+	# 	wktime_helper = Object.new.extend(WktimeHelper)	
+	# 	if !context[:time_entry].hours.blank? && !context[:time_entry].activity_id.blank?				
+	# 		status = wktime_helper.getTimeEntryStatus(context[:time_entry].spent_on,context[:time_entry].user_id)		
+	# 		if !status.blank? && ('a' == status || 's' == status || 'l' == status)					
+	# 			 #raise "#{l(:label_warning_wktime_time_entry)}"
+	# 		end			
+	# 	end
+	# end
 	
 	# def view_layouts_base_html_head(context={})	
 		# wktime_helper = Object.new.extend(WktimeHelper)

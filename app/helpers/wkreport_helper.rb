@@ -1,5 +1,5 @@
 # ERPmine - ERP for service industry
-# Copyright (C) 2011-2016  Adhi software pvt ltd
+# Copyright (C) 2011-2020  Adhi software pvt ltd
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -51,8 +51,10 @@ module WkreportHelper
 			ret = validateERPPermission("B_ACC_PRVLG") || validateERPPermission("A_ACC_PRVLG")
 		elsif reportName == 'report_lead_conversion' || reportName == 'report_sales_activity'
 			ret = (validateERPPermission("B_CRM_PRVLG") || validateERPPermission("A_CRM_PRVLG") ) && isChecked('wktime_enable_crm_module')
-		elsif reportName == 'report_order_to_cash' || reportName == 'report_project_profitability'
-			ret = validateERPPermission("M_BILL")
+		elsif reportName == 'report_order_to_cash' || reportName == 'report_project_profitability' || reportName == 'report_account_payable'
+			ret = validateERPPermission("M_BILL")		
+		elsif reportName == 'report_asset'
+			ret = validateERPPermission("V_INV")
 		end
 		ret
 	end
@@ -135,12 +137,21 @@ module WkreportHelper
 		inBtwMnthArr
 	end
 	
-	def getAccountContactSql
+	def getAccountContactSql(rptName=nil)
 		parentSql = ""
 		if ActiveRecord::Base.connection.adapter_name == 'Mysql2'
-			parentSql = "COLLATE utf8_unicode_ci"
+			encoding = ActiveRecord::Base.connection_config[:encoding]
+			encoding ||= "utf8"
+			parentSql = "COLLATE #{encoding}_unicode_ci"
 		end
-		sqlStr = "select 'WkAccount' #{parentSql} as parent_type, id as parent_id from wk_accounts where account_type = 'A' union select 'WkCrmContact' #{parentSql} as parent_type, id as parent_id from wk_crm_contacts where contact_type in ('C', 'RA')"
+		if rptName == "AP-Aging"
+			accCond = "S"
+			conCond = "'SC'"
+		else
+			accCond = "A"
+			conCond = "'C', 'RA'"
+		end
+		sqlStr = "select 'WkAccount' #{parentSql} as parent_type, id as parent_id from wk_accounts where account_type = '#{accCond}' union select 'WkCrmContact' #{parentSql} as parent_type, id as parent_id from wk_crm_contacts where contact_type in (#{conCond})"
 		sqlStr
 	end
 	
@@ -154,7 +165,7 @@ module WkreportHelper
 	
 	def getAddress	
 		address_list = WkAddress.joins("RIGHT JOIN wk_locations ON wk_addresses.id = wk_locations.address_id")
-		mainAddress = address_list.where("wk_locations.is_main = true")
+		mainAddress = address_list.where("wk_locations.is_main = #{booleanFormat(true)}")
 		address_list = mainAddress unless mainAddress.blank?
 		address_list = (address_list.blank? || address_list.first.id.blank?) ? "" : address_list.first.fullAddress
 		address_list

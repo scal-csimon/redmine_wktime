@@ -1,6 +1,6 @@
 
 <% wkexpense_helper = Object.new.extend(WkexpenseHelper) %>
-<%	accArr = options_for_wktime_account(false, 'A')
+<%	accArr = options_for_wktime_account(false, 'A', controller.additionalAccountType)
 	if !@oppEditEntry.blank?
 		accArr = relatedValues(@oppEditEntry[0].parent_type, @oppEditEntry[0].parent_id, 'C', true, controller.additionalContactType)	
     elsif !params[:parentType].blank?

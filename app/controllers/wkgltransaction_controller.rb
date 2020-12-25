@@ -160,15 +160,15 @@ class WkgltransactionController < WkaccountingController
 						
 					end
 
-					wktxnDetail.ledger_id = params["txn_particular#{i}"]
-					if (params["txn_debit#{i}"].blank? || params["txn_debit#{i}"].to_f == 0) && (params["txn_credit#{i}"].blank? || params["txn_credit#{i}"].to_f == 0)
+					wktxnDetail.ledger_id = params["txn_particular_#{i}"]
+					if (params["txn_debit_#{i}"].blank? || params["txn_debit_#{i}"].to_f == 0) && (params["txn_credit_#{i}"].blank? || params["txn_credit_#{i}"].to_f == 0)
 						next
-					elsif params["txn_debit#{i}"].blank? || params["txn_debit#{i}"].to_f == 0.00
+					elsif params["txn_debit_#{i}"].blank? || params["txn_debit_#{i}"].to_f == 0.00
 						wktxnDetail.detail_type = 'c'
-						wktxnDetail.amount = params["txn_credit#{i}"].to_f
+						wktxnDetail.amount = params["txn_credit_#{i}"].to_f
 					else
 						wktxnDetail.detail_type = 'd'
-						wktxnDetail.amount = params["txn_debit#{i}"].to_f
+						wktxnDetail.amount = params["txn_debit_#{i}"].to_f
 
 					end
 					wktxnDetail.currency = Setting.plugin_redmine_wktime['wktime_currency']
@@ -184,8 +184,8 @@ class WkgltransactionController < WkaccountingController
 						arrId << wktxnDetail.id
 						
 					end
-					# errorMsg = errorMsg.blank? ? "params[txn_debit#{i}].to_f = " + "#{params["txn_debit#{i}"].to_f.to_s}" : "params[txn_debit#{i}].to_f = " + "#{params["txn_debit#{i}"].to_f.to_s}" + "<br/>" + errorMsg
-					# errorMsg = "params[txn_credit#{i}].to_f = " + params["txn_credit#{i}"].to_f.to_s + "<br/>" + errorMsg
+					# errorMsg = errorMsg.blank? ? "params[txn_debit_#{i}].to_f = " + "#{params["txn_debit_#{i}"].to_f.to_s}" : "params[txn_debit_#{i}].to_f = " + "#{params["txn_debit_#{i}"].to_f.to_s}" + "<br/>" + errorMsg
+					# errorMsg = "params[txn_credit_#{i}].to_f = " + params["txn_credit_#{i}"].to_f.to_s + "<br/>" + errorMsg
 				end
 				unless arrId.blank?
 					WkGlTransactionDetail.where(:gl_transaction_id => wkgltransaction.id).where.not(:id => arrId).delete_all()
@@ -289,8 +289,8 @@ class WkgltransactionController < WkaccountingController
 		
 		for i in 1..params[:txntotalrow].to_i
 
-			txnDebitTotal = txnDebitTotal + params["txn_debit#{i}"].to_f if !params["txn_debit#{i}"].blank?
-			txnCreditTotal = txnCreditTotal + params["txn_debit#{i}"].to_f if !params["txn_debit#{i}"].blank?
+			txnDebitTotal = txnDebitTotal + params["txn_debit_#{i}"].to_f if !params["txn_debit_#{i}"].blank?
+			txnCreditTotal = txnCreditTotal + params["txn_debit_#{i}"].to_f if !params["txn_debit_#{i}"].blank?
 
 		end
 		
@@ -318,10 +318,10 @@ class WkgltransactionController < WkaccountingController
 				wktxnDetail.ledger_id = params["txn_particular_#{i}"]
 				if params["txn_debit_#{i}"].blank?
 					wktxnDetail.detail_type = 'c'
-					wktxnDetail.amount = params["txn_credit#{i}"].to_f
+					wktxnDetail.amount = params["txn_credit_#{i}"].to_f
 				else
 					wktxnDetail.detail_type = 'd'
-					wktxnDetail.amount = params["txn_debit#{i}"].to_f
+					wktxnDetail.amount = params["txn_debit_#{i}"].to_f
 				end
 				wktxnDetail.currency = Setting.plugin_redmine_wktime['wktime_currency']
 				@tempwktxnDetail << wktxnDetail
@@ -431,8 +431,8 @@ class WkgltransactionController < WkaccountingController
 	def set_transaction_session
 		session[controller_name][:start_date] = params[:date]
 		session[controller_name][:txn_type] = params[:txn_type]
-		session[controller_name][:ledger_id1] = params[:txn_particular1]
-		session[controller_name][:ledger_id2] = params[:txn_particular2]
+		session[controller_name][:ledger_id1] = params[:txn_particular_1]
+		session[controller_name][:ledger_id2] = params[:txn_particular_2]
 	end
 
 	def export

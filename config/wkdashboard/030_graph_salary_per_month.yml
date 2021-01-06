@@ -49,7 +49,7 @@ expenseDetail =
          end;
      end;
  end;
- fields = []; 12.times {|m| fields << month_name(((financial_period_end.month - 1 - m) % 12) + 1).first(3)} ;
+ fields = []; 12.times {|m| fields << month_name(((financial_period_end.month - m) % 12) + 1).first(3)} ;
  @profit_expense_arr = [0]*12;
  profitExpenseHash.each {|month, sum| @profit_expense_arr[financial_period_end.month - month.to_i] = sum };
 

@@ -11,7 +11,7 @@
  end;
 
 financial_period_end = @to;
-financial_period_start = (financial_period_end.day.to_s + '/'+financial_period_end.month.to_s + '/'+(@to.year - 1).to_s).to_date + 1.days;
+financial_period_start = ('01/'+(financial_period_end.month + 1).to_s + '/'+(financial_period_end.year - 1).to_s).to_date;
 
 expenseDetail = 
     WkGlTransactionDetail

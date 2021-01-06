@@ -8,7 +8,7 @@
      financial_period_start = ('01/'+getFinancialStart.to_s+'/'+@to.year.to_s).to_datetime - 1.second;
      financial_period_end = ('01/'+getFinancialStart.to_s+'/'+(@to.year + 1).to_s).to_date - 1.second;
  end;
-incomeDetail = WkGlTransactionDetail.joins('LEFT OUTER JOIN wk_ledgers on wk_ledgers.id = wk_gl_transaction_details.ledger_id').joins('LEFT OUTER JOIN wk_gl_transactions on wk_gl_transactions.id = wk_gl_transaction_details.gl_transaction_id' ).where('wk_ledgers.ledger_type IN (?) and wk_gl_transactions.trans_date between ? and ?', incomeLedgerTypes, getToDateTime(financial_period_start), getToDateTime(financial_period_end)).select('SUM(wk_gl_transaction_details.amount) AS sum_amount, wk_ledgers.id as ledger_id, wk_ledgers.ledger_type, wk_gl_transaction_details.detail_type, extract(year from wk_gl_transactions.trans_date) AS trans_year, extract(month from wk_gl_transactions.trans_date) AS trans_month ').group('wk_ledgers.id, wk_ledgers.ledger_type, wk_gl_transaction_details.detail_type, extract(year from wk_gl_transactions.trans_date), extract(month from wk_gl_transactions.trans_date)').order('trans_year, trans_month');
+incomeDetail = WkGlTransactionDetail.joins('LEFT OUTER JOIN wk_ledgers on wk_ledgers.id = wk_gl_transaction_details.ledger_id').joins('LEFT OUTER JOIN wk_gl_transactions on wk_gl_transactions.id = wk_gl_transaction_details.gl_transaction_id' ).where('wk_ledgers.ledger_type IN (?) and wk_gl_transactions.trans_date between ? and ?', incomeLedgerTypes, getToDateTime(@from), getToDateTime(@to)).select('SUM(wk_gl_transaction_details.amount) AS sum_amount, wk_ledgers.id as ledger_id, wk_ledgers.ledger_type, wk_gl_transaction_details.detail_type, extract(year from wk_gl_transactions.trans_date) AS trans_year, extract(month from wk_gl_transactions.trans_date) AS trans_month ').group('wk_ledgers.id, wk_ledgers.ledger_type, wk_gl_transaction_details.detail_type, extract(year from wk_gl_transactions.trans_date), extract(month from wk_gl_transactions.trans_date)').order('trans_year, trans_month');
  incomeHash = Hash.new;
  incomeDetail.each do |ic|;
      transDt = ic.trans_month.to_i;
@@ -38,10 +38,10 @@ incomeDetail = WkGlTransactionDetail.joins('LEFT OUTER JOIN wk_ledgers on wk_led
      end;
  end;
  fields = [];
- 12.times {|m| fields << month_name(((financial_period_end.month - 1 - m) % 12) + 1).first(3)};
+ 12.times {|m| fields << month_name(((@to.month - 1 - m) % 12) + 1).first(3)};
  @profit_income_arr = [0]*12;
- profitIncomeHash.each {|month, sum| @profit_income_arr[financial_period_end.month - month.to_i] = sum };
- expenseDetail = WkGlTransactionDetail.joins('LEFT OUTER JOIN wk_ledgers on wk_ledgers.id = wk_gl_transaction_details.ledger_id').joins('LEFT OUTER JOIN wk_gl_transactions on wk_gl_transactions.id = wk_gl_transaction_details.gl_transaction_id' ).where('wk_ledgers.ledger_type IN (?) and wk_gl_transactions.trans_date between ? and ?', expenseLedgerTypes, getToDateTime(financial_period_start), getToDateTime(financial_period_end)).select('SUM(wk_gl_transaction_details.amount) AS sum_amount, wk_ledgers.id as ledger_id, wk_ledgers.ledger_type, wk_gl_transaction_details.detail_type, extract(year from wk_gl_transactions.trans_date) AS trans_year, extract(month from wk_gl_transactions.trans_date) AS trans_month ').group('wk_ledgers.id, wk_ledgers.ledger_type, wk_gl_transaction_details.detail_type, extract(year from wk_gl_transactions.trans_date), extract(month from wk_gl_transactions.trans_date)').order('trans_year, trans_month'); expenseHash = Hash.new;
+ profitIncomeHash.each {|month, sum| @profit_income_arr[@to.month - month.to_i] = sum };
+ expenseDetail = WkGlTransactionDetail.joins('LEFT OUTER JOIN wk_ledgers on wk_ledgers.id = wk_gl_transaction_details.ledger_id').joins('LEFT OUTER JOIN wk_gl_transactions on wk_gl_transactions.id = wk_gl_transaction_details.gl_transaction_id' ).where('wk_ledgers.ledger_type IN (?) and wk_gl_transactions.trans_date between ? and ?', expenseLedgerTypes, getToDateTime(@from), getToDateTime(@to)).select('SUM(wk_gl_transaction_details.amount) AS sum_amount, wk_ledgers.id as ledger_id, wk_ledgers.ledger_type, wk_gl_transaction_details.detail_type, extract(year from wk_gl_transactions.trans_date) AS trans_year, extract(month from wk_gl_transactions.trans_date) AS trans_month ').group('wk_ledgers.id, wk_ledgers.ledger_type, wk_gl_transaction_details.detail_type, extract(year from wk_gl_transactions.trans_date), extract(month from wk_gl_transactions.trans_date)').order('trans_year, trans_month'); expenseHash = Hash.new;
  expenseDetail.each do |ic|; transDt = ic.trans_month.to_i;
      if expenseHash[transDt].blank?;
          expenseHash[transDt] = {ic.ledger_type => {ic.detail_type => ic.sum_amount}}; else;
@@ -66,9 +66,9 @@ incomeDetail = WkGlTransactionDetail.joins('LEFT OUTER JOIN wk_ledgers on wk_led
          end;
      end;
  end;
- fields = []; 12.times {|m| fields << month_name(((financial_period_end.month - 1 - m) % 12) + 1).first(3)} ;
+ fields = []; 12.times {|m| fields << month_name(((@to.month - 1 - m) % 12) + 1).first(3)} ;
  @profit_expense_arr = [0]*12;
- profitExpenseHash.each {|month, sum| @profit_expense_arr[financial_period_end.month - month.to_i] = sum };
+ profitExpenseHash.each {|month, sum| @profit_expense_arr[@to.month - month.to_i] = sum };
 
  { 'fields' => fields.reverse };"
   x_title: "label_months"

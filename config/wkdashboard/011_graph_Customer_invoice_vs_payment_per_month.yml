@@ -9,7 +9,7 @@
     financial_period_end = ('01/'+getFinancialStart.to_s+'/'+(@to.year + 1).to_s).to_date - 1.second;
     end;
     financial_period_end = @to;
-    financial_period_start = ('01/'+((financial_period_end.month + 1) % 12).to_s + '/'+(financial_period_end.year - 1).to_s).to_date;
+financial_period_start = ('01/'+((financial_period_end.month % 12) +1).to_s + '/'+(financial_period_end.year - 1).to_s).to_date;
     toalInvoiceAmount = 
         WkInvoice.joins(:invoice_items)
         .where('wk_invoices.invoice_type = ? AND wk_invoices.invoice_date BETWEEN ? AND ?','I', getFromDateTime(financial_period_start),getToDateTime(financial_period_end))

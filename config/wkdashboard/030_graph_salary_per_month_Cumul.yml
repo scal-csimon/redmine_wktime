@@ -10,7 +10,7 @@
      end;
 
 financial_period_end = @to;
-financial_period_start = ('01/'+(financial_period_end.month + 1).to_s + '/'+(financial_period_end.year - 1).to_s).to_date;
+financial_period_start = ('01/'+((financial_period_end.month + 1) % 12).to_s + '/'+(financial_period_end.year - 1).to_s).to_date;
 
 
      expenseDetail = 

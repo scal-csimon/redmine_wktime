@@ -260,16 +260,14 @@ class WkorderentityController < WkbillingController
 	def new
 	
 	end
-	
+
 	def update
 		if api_request?
 			row_index =0
-			params['invoiceItems'].each do |index, data|
-				if data['hd_item_type'] != 't' && data['hd_item_type'] != 'r'
-					row_index = row_index+1
-					data.each do | item |
-						params[item.first + (row_index).to_s] = item.last					
-					end
+			params['invoiceItems'].each do |data, index|
+				row_index = row_index+1
+				data.each do | item |
+					params[item.first + "_" + (row_index).to_s] = item.last					
 				end
 			end
 			params['totalrow'] = row_index

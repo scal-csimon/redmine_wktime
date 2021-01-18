@@ -18,7 +18,8 @@
 class WkgltransactionController < WkaccountingController
   unloadable
   include WkgltransactionHelper
-  
+  accept_api_auth :index, :edit, :update
+
 	 def index
 		sort_init 'trans_date', 'desc'
 		sort_update 'trans_date' => "trans_date",
@@ -114,6 +115,14 @@ class WkgltransactionController < WkaccountingController
 			formPagination(transaction.reorder(sort_clause))
 		end
 		transaction
+
+		respond_to do |format|
+			format.html {        
+			  render :layout => !request.xhr?
+			}
+			format.api
+		end
+
    end
    
     def edit
@@ -129,6 +138,7 @@ class WkgltransactionController < WkaccountingController
 			@transEntry = $tempTransaction
 			@transDetails = $temptxnDetail
 		end
+
     end
    
     def update

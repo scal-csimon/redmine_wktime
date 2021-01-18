@@ -1,0 +1,8 @@
+api.array :wk_gl_transactions , api_meta(:total_count => @entry_count, :offset => @offset, :limit => @limit) do
+  @transEntries.each do |entry|
+    api.entry do
+      api.id entry.id
+    
+    end
+  end
+end

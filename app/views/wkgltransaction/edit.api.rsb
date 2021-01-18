@@ -1,0 +1,15 @@
+
+
+transdetails = @transDetails || {}.values || []
+api.transaction do
+  if @transEntry.present?
+    api.invoice_id @transEntry.id
+  end
+  api.array :trans_details do
+    transdetails.each do |trdetail|
+      api.trans_detail do
+        api.item_id trdetail.try(:id)
+      end
+    end
+  end
+end

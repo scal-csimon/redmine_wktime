@@ -2,7 +2,9 @@ api.array :wk_gl_transactions , api_meta(:total_count => @entry_count, :offset =
   @transEntries.each do |entry|
     api.entry do
       api.id entry.id
-    
+      api.trans_type entry.trans_type
+			api.trans_date entry.trans_date
+			api.comment entry.comment
     end
   end
 end

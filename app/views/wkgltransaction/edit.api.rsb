@@ -1,14 +1,25 @@
 
-
-transdetails = @transDetails || {}.values || []
-api.transaction do
+@transEntry = @transEntry[0] unless @transEntry[0].blank?
+transdts = @transDetails || {}.values || []
+api.wk_gl_transactions do
   if @transEntry.present?
-    api.invoice_id @transEntry.id
+    api.id @transEntry.id
+    api.trans_type @transEntry.trans_type
+		api.trans_date @transEntry.trans_date
+		api.comment @transEntry.comment
   end
-  api.array :trans_details do
-    transdetails.each do |trdetail|
+  api.array :wk_gl_transaction_details  do
+    transdts.each do |trdetail|
       api.trans_detail do
         api.item_id trdetail.try(:id)
+        api.parent_id trdetail.gl_transaction_id
+        api.ledger do
+          api.leger_id trdetail.ledger_id
+          api.leger_name trdetail.ledger.name
+        end
+        api.detail_type trdetail.detail_type
+        api.currency trdetail.currency
+        api.amount trdetail.amount
       end
     end
   end

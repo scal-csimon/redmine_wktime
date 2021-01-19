@@ -141,7 +141,18 @@ class WkgltransactionController < WkaccountingController
 
     end
    
-    def update
+	def update
+		if api_request?
+			row_index =0
+			params['wk_gl_transaction_details'].each do |data, index|
+				row_index = row_index+1
+				data.each do | txn |
+					params[txn.first + "_" + (row_index).to_s] = txn.last					
+				end
+			end
+			params['txntotalrow'] = row_index
+		end
+
 		set_transaction_session
 		errorMsg = nil
 		wkgltransaction = nil
@@ -223,16 +234,34 @@ class WkgltransactionController < WkaccountingController
 			#errorMsg = l(:label_transaction) + " " + l('activerecord.errors.messages.invalid')
 			#errorMsg = errorMsg.blank? ? "test 2" : "" + "test2 <br/>" + errorMsg
 		end
+
 		if errorMsg.blank?
-			action_name = params[:gltransaction_save_continue].blank? ? "index" : "edit"
-		    redirect_to :controller => 'wkgltransaction', :action => action_name, :tab => 'wkgltransaction'			
 			$temptxnDetail = nil
 			$tempTransaction = nil
-		    flash[:notice] = l(:notice_successful_update)
-		else
-			flash[:error] = errorMsg #wkaccount.errors.full_messages.join("<br>")
-		    redirect_to :controller => 'wkgltransaction',:action => 'edit', :isError => true
 		end
+
+		respond_to do |format|
+			format.html {
+				if errorMsg.blank?
+					action_name = params[:gltransaction_save_continue].blank? ? "index" : "edit"
+					redirect_to :controller => 'wkgltransaction', :action => action_name, :tab => 'wkgltransaction'			
+					flash[:notice] = l(:notice_successful_update)
+				else
+					flash[:error] = errorMsg #wkaccount.errors.full_messages.join("<br>")
+					redirect_to :controller => 'wkgltransaction',:action => 'edit', :isError => true
+				end
+			}
+			format.api{
+				if errorMsg.blank?
+					render :plain => errorMsg, :layout => nil
+				else		
+					@error_messages = errorMsg.split('\n')	
+					render :template => 'common/error_messages.api', :status => :unprocessable_entity, :layout => nil
+				end
+			}
+		end
+
+		
     end
 	
 	def validateTransaction

@@ -1,0 +1,24 @@
+
+api.wk_gl_transactions do
+  if @wkgltransaction.present?
+    api.id @wkgltransaction.id
+    api.trans_type @wkgltransaction.trans_type
+	api.trans_date @wkgltransaction.trans_date
+	api.comment @wkgltransaction.comment
+  end
+  api.array :wk_gl_transaction_details  do
+    @wktxnDetail.each do |trdetail|
+      api.trans_detail do
+        api.item_id trdetail.try(:id)
+        api.parent_id trdetail.gl_transaction_id
+        api.ledger do
+          api.leger_id trdetail.ledger_id
+          api.leger_name trdetail.ledger.name
+        end
+        api.detail_type trdetail.detail_type
+        api.currency trdetail.currency
+        api.amount trdetail.amount
+      end
+    end
+  end
+end

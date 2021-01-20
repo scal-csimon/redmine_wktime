@@ -36,7 +36,7 @@ class WkgltransactionController < WkaccountingController
 			@summaryTransaction = params[:summary_by].to_s
 			@from = params[:from]
 			@to = params[:to]
-			transactionType = session[controller_name].try(:[], :trans_type)
+			transactionType = params[:trans_type]
 			@ledgerId = params[:txn_ledger]
 			@free_period = true
 		end
@@ -153,7 +153,9 @@ class WkgltransactionController < WkaccountingController
 			params['txntotalrow'] = row_index
 		end
 
-		set_transaction_session
+		if !api_request?
+			set_transaction_session
+		end
 		errorMsg = nil
 		wkgltransaction = nil
 		wktxnDetail = nil
@@ -240,6 +242,9 @@ class WkgltransactionController < WkaccountingController
 			$tempTransaction = nil
 		end
 
+		@wkgltransaction = wkgltransaction
+		@wktxnDetail = WkGlTransactionDetail.where(:gl_transaction_id => wkgltransaction.id)
+
 		respond_to do |format|
 			format.html {
 				if errorMsg.blank?
@@ -252,9 +257,7 @@ class WkgltransactionController < WkaccountingController
 				end
 			}
 			format.api{
-				if errorMsg.blank?
-					render :plain => errorMsg, :layout => nil
-				else		
+				if errorMsg.blank?	
 					@error_messages = errorMsg.split('\n')	
 					render :template => 'common/error_messages.api', :status => :unprocessable_entity, :layout => nil
 				end

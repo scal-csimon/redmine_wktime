@@ -244,6 +244,7 @@ match 'updateAttendance', :controller => 'wktime', :action => 'updateAttendance'
 	get 'wkgltransaction/edit', :to => 'wkgltransaction#edit'
 	
 	get 'wkgltransaction/update', :to => 'wkgltransaction#update'
+	post 'wkgltransaction/update', :to => 'wkgltransaction#update'
 	
 	delete 'wkgltransaction/destroy', :to => 'wkgltransaction#destroy'
 	

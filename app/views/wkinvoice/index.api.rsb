@@ -6,14 +6,31 @@ api.array :wk_invoice, api_meta(:total_count => @entry_count, :offset => @offset
       api.name entry.parent.name
       api.project entry.invoice_items[0].project.name if entry.invoice_items[0].present? && entry.invoice_items[0].project.present?
       api.invoice_date entry.invoice_date
+      api.gl_tranasction_id entry.gl_transaction_id
       api.start_date entry.start_date
       api.end_date entry.end_date
       api.status (entry.status == 'o' ? 'open' : 'closed')
       api.quantity ("%.4f" % entry.invoice_items.sum(:quantity))
       api.amount ("%.2f" % entry.invoice_items.sum(:amount))
       api.org_amount ("%.2f" % entry.invoice_items.sum(:original_amount))
-			api.org_currency entry.invoice_items[0].original_currency unless entry.invoice_items[0].blank?
-			api.currency entry.invoice_items[0].currency unless entry.invoice_items[0].blank?
+      api.org_currency entry.invoice_items[0].original_currency unless entry.invoice_items[0].blank?
+      api.currency entry.invoice_items[0].currency unless entry.invoice_items[0].blank?
+      api.array :invoiceItemEntries do
+        entry.invoice_items.each do |invItem|
+          api.invoice_item do
+            api.item_id invItem.try(:id)
+            api.name invItem.name
+            api.project_id invItem.project_id
+            api.rate invItem.rate
+            api.amount invItem.amount
+            api.quantity invItem.quantity
+            api.hd_item_type invItem.item_type
+            api.currency invItem.currency
+            api.original_currency invItem.original_currency
+            api.original_amount invItem.original_amount
+          end
+        end
+      end
     end
   end
 end

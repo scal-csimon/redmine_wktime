@@ -10,19 +10,25 @@
     end;
 
     financial_period_end = @to;
-financial_period_start = ('01/'+((financial_period_end.month % 12) +1).to_s + '/'+(financial_period_end.year - 1).to_s).to_date;
+    financial_period_start = ('01/'+((financial_period_end.month % 12) +1).to_s + '/'+(financial_period_end.year - 1).to_s).to_date;
+
+    groupby_casewhen = 
+          'CASE WHEN wk_invoices.invoice_date > \"' + getFromDateTime(financial_period_start).to_s + '\" ' +
+          'THEN extract(month from wk_invoices.invoice_date) ' +
+          'ELSE extract(month from \"' + getFromDateTime(financial_period_start).to_s + '\") + 1 ' +
+          'END';
 
     toalInvoiceAmount = 
         WkInvoice.joins(:invoice_items)
-        .where('wk_invoices.invoice_type = ? AND wk_invoices.invoice_date BETWEEN ? AND ?','I', getFromDateTime(financial_period_start),getToDateTime(financial_period_end))
-        .select('extract(month from wk_invoices.invoice_date) as month_val, round(sum(wk_invoice_items.amount),2) invoice_total')
-        .group('extract(month from wk_invoices.invoice_date)');
+        .where('wk_invoices.invoice_type = ? AND wk_invoices.invoice_date < ?','I', getToDateTime(financial_period_end))
+        .select(groupby_casewhen + ' as month_val, round(sum(wk_invoice_items.amount),2) invoice_total')
+        .group(groupby_casewhen);
     
-    toalPayment = 
+    totalPayment = 
         WkPaymentItem.joins(:payment).joins(:invoice)
-        .where('wk_invoices.invoice_type = ? AND wk_payment_items.is_deleted = false AND wk_payments.payment_date BETWEEN ? AND ?','I', getFromDateTime(financial_period_start),getToDateTime(financial_period_end))
-        .select('extract(month from wk_payments.payment_date) as month_val, round(sum(wk_payment_items.amount),2) payment_total')
-        .group('extract(month from wk_payments.payment_date)');
+        .where('wk_invoices.invoice_type = ? AND wk_payment_items.is_deleted = false AND wk_payments.payment_date < ?','I', getToDateTime(financial_period_end))
+        .select(groupby_casewhen + ' as month_val, round(sum(wk_payment_items.amount),2) payment_total')
+         .group(groupby_casewhen);
         
     invoice_total_hash = toalInvoiceAmount.map {|c| [c.month_val.to_s,c.invoice_total.to_f] }.to_h; fields = [];
     12.times {|m| fields << month_name(((financial_period_end.month - 1 - m) % 12) + 1).first(3)};
@@ -31,7 +37,7 @@ financial_period_start = ('01/'+((financial_period_end.month % 12) +1).to_s + '/
     @invoice_total_arr.reverse!;
     @invoice_total_arr.each_with_index {|amt, index| @invoice_total_arr[index] = amt + @invoice_total_arr[index -1 ] if index != 0};
     @invoice_total_arr.reverse!;
-    payment_total_hash = toalPayment.map {|c| [c.month_val.to_s,c.payment_total.to_f] }.to_h;
+    payment_total_hash = totalPayment.map {|c| [c.month_val.to_s,c.payment_total.to_f] }.to_h;
     fields = []; 12.times {|m| fields << month_name(((financial_period_end.month - 1 - m) % 12) + 1).first(3)};
     @payment_total_arr = [0]*12;
     payment_total_hash.each {|month, sum| @payment_total_arr[financial_period_end.month - month.to_i] = sum };

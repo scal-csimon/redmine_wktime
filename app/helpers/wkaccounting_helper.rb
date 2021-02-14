@@ -116,6 +116,33 @@ include WktimeHelper
 		end
 		subEntriesHash
 	end
+	def getSubEntriesIGRF(from, asOnDate, ledgerType)
+		subEntriesHash = nil
+		bsEndDate = ledgerType == 'PL' ? from -1  : asOnDate
+		unless getLedgerTypeGrpHash[ledgerType].blank?
+			subEntriesHash = Hash.new
+			getLedgerTypeGrpHash[ledgerType].each do |subType|
+				subEntriesHash[subType] = getEachLedgerBSAmtIGRF(bsEndDate, [subType])
+			end
+		end
+		if ledgerType == 'PL'
+			totalIncome = 0
+			totalExpense = 0
+			defLedger = WkLedger.where(:ledger_type => 'SY')
+			incomeLedgerTypes.each do |type|
+				totalIncome = totalIncome + getEntriesTotal(subEntriesHash[type])
+			end
+			expenseLedgerTypes.each do |type|
+				totalExpense = totalExpense + getEntriesTotal(subEntriesHash[type])
+			end
+			subEntriesHash.clear
+			plOpeningBal = getEachLedgerBSAmtIGRF(bsEndDate, ['SY']).blank? ? 0 : getEachLedgerBSAmtIGRF(bsEndDate, ['SY']).values[0]
+			subEntriesHash[l(:wk_label_opening)+ " " + l(:wk_field_balance)] = totalIncome - totalExpense + (defLedger[0].opening_balance.blank? ? 0 : defLedger[0].opening_balance) + plOpeningBal
+			subEntriesHash[l(:label_current)+ " " + l(:label_period)] = getPLfor(from, asOnDate)
+			
+		end
+		subEntriesHash
+	end
 	
 	def getPLfor(from, to)
 		totalIncome = 0
@@ -171,6 +198,22 @@ include WktimeHelper
 		end
 		balHash
 	end
+	def getEachLedgerBSAmtIGRF(asOnDate, ledgerType)
+		typeArr = ['c', 'd']
+		detailHash = Hash.new
+		typeArr.each do |type|
+			detailHash[type] = WkGlTransactionDetail.includes(:ledger, :wkgltransaction).where('wk_gl_transaction_details.detail_type = ? and wk_ledgers.ledger_type IN (?) and wk_gl_transactions.trans_date <= ?', type, ledgerType, asOnDate).references(:ledger,:wkgltransaction).group('wk_ledgers.igrf_account_number').sum('wk_gl_transaction_details.amount')
+		end
+		profitHash = calculateBalance(detailHash['c'], detailHash['d'], ledgerType[0])
+		balHash = Hash.new
+		ledgers = WkLedger.where(:ledger_type => ledgerType).order(:igrf_account_number)
+		ledgers.each do |ledger|
+			unless profitHash[ledger.id].blank? && (ledger.opening_balance.blank? || ledger.opening_balance == 0)
+				balHash[ledger.igrf_account_number + " - " ledger.igrf_account_description] = (profitHash[ledger.id].blank? ? 0 : profitHash[ledger.id]) + ((ledger.opening_balance.blank? || ledger.ledger_type == 'SY') ? 0 : ledger.opening_balance)
+			end
+		end
+		balHash
+	end
 	
 	def calculateBalance(creditHash, debitHash, ledgerType)
 		if isSubtractCr(ledgerType)
@@ -214,6 +257,22 @@ include WktimeHelper
 		else
 			typeArr.each do |type|
 				detailHash[type] = WkGlTransactionDetail.includes(:ledger, :wkgltransaction).where('wk_gl_transaction_details.detail_type = ? and wk_ledgers.ledger_type IN (?) and wk_gl_transactions.trans_date between ? and ?', type, ledgerType, from, to).references(:ledger,:wkgltransaction).group('wk_ledgers.id, wk_ledgers.name').sum('wk_gl_transaction_details.amount')
+			end
+		end
+		profitHash = calculateBalance(detailHash['c'], detailHash['d'], ledgerType[0])
+		profitHash
+	end
+
+	def getEachLedgerSumAmtIGRF(from, to, ledgerType)
+		typeArr = ['c', 'd']
+		detailHash = Hash.new
+		if ledgerType.blank?
+			typeArr.each do |type|
+				detailHash[type] = WkGlTransactionDetail.includes(:ledger, :wkgltransaction).where('wk_gl_transaction_details.detail_type = ? and wk_gl_transactions.trans_date between ? and ?', type, from, to).references(:ledger,:wkgltransaction).group('wk_ledgers.igrf_account_number').sum('wk_gl_transaction_details.amount')
+			end
+		else
+			typeArr.each do |type|
+				detailHash[type] = WkGlTransactionDetail.includes(:ledger, :wkgltransaction).where('wk_gl_transaction_details.detail_type = ? and wk_ledgers.ledger_type IN (?) and wk_gl_transactions.trans_date between ? and ?', type, ledgerType, from, to).references(:ledger,:wkgltransaction).group('wk_ledgers.igrf_account_number').sum('wk_gl_transaction_details.amount')
 			end
 		end
 		profitHash = calculateBalance(detailHash['c'], detailHash['d'], ledgerType[0])

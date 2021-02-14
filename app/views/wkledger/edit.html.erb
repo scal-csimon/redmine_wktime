@@ -37,9 +37,7 @@
 			<tr>
 				<th align="left"><%= l(:label_igrf_description) %></th>
 				<td align="left" style="padding-left:40px;">
-					<td align="left" style="padding-left:40px;">
-						<%=h text_field_tag("igrf_account_description", (@ledgersDetail[0].blank? ? "" : @ledgersDetail[0].igrf_account_description),:size => 20) %>
-					</td>
+					<%=h text_field_tag("igrf_account_description", (@ledgersDetail[0].blank? ? "" : @ledgersDetail[0].igrf_account_description),:size => 20) %>
 				</td>			   
 			</tr>
 		</table>	

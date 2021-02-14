@@ -163,7 +163,7 @@ include WktimeHelper
 		end
 		profitHash = calculateBalance(detailHash['c'], detailHash['d'], ledgerType[0])
 		balHash = Hash.new
-		ledgers = WkLedger.where(:ledger_type => ledgerType)
+		ledgers = WkLedger.where(:ledger_type => ledgerType).order(:name)
 		ledgers.each do |ledger|
 			unless profitHash[ledger.id].blank? && (ledger.opening_balance.blank? || ledger.opening_balance == 0)
 				balHash[ledger.name] = (profitHash[ledger.id].blank? ? 0 : profitHash[ledger.id]) + ((ledger.opening_balance.blank? || ledger.ledger_type == 'SY') ? 0 : ledger.opening_balance)

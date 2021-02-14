@@ -31,9 +31,9 @@
 				@subEntriesHash = Hash.new
 				@mainTotalHash = Hash.new
 				total = 0
-				@ledgerIGRFArr = ['Actifs à court terme', 'Immobilisations', 'Actifs à long terme', 'Passifs à court terme','Passifs à long terme', 'Capitaux propres', 'Bénéfices non répartis / déficit']
+				@ledgerIGRFArr = getLedgerIGRFType
 				@ledgerIGRFArr.each do |type|
-					@mainEnriesHash[type] = getEachLedgerBSAmtIGRF(@to, [type])
+					@mainEnriesHash[type] = getEachLedgerBSAmtIGRF(@to, type)
 					@subEntriesHash[type] = getSubEntriesIGRF(@from, @to, type)
 					if type == 'PL'
 						defLedgerEnries = getEachLedgerSumAmt(@from, @to, ['SY'])

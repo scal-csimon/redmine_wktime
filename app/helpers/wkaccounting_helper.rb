@@ -90,6 +90,18 @@ include WktimeHelper
 	end
 	
 	def getLedgerIGRFType
+		ledgerIGRFType = [
+			"Actifs à court terme"
+			"Immobilisations"
+			"Actifs à long terme" ,
+			"Passifs à court terme" ,
+			"Passifs à long terme",
+			"Capitaux propres",
+			"Bénéfices non répartis / déficit",
+		}
+		ledgerIGRFType
+	end
+	def getLedgerIGRFTypeHash
 		ledgerIGRFType = {
 			"Actifs à court terme" => [1000,1599], #'SH',
 			"Immobilisations" => [1600,2179],
@@ -216,7 +228,7 @@ include WktimeHelper
 		detailHash = Hash.new
 		
 		typeArr.each do |type|
-			ledgerIgrfrange = getLedgerIGRFType[ledgerType]
+			ledgerIgrfrange = getLedgerIGRFTypeHash[ledgerType]
 			detailHash[type] = WkGlTransactionDetail.includes(:ledger, :wkgltransaction).where('wk_gl_transaction_details.detail_type = ? and wk_ledgers.igrf_account_number BETWEEN ? and ? and wk_gl_transactions.trans_date <= ?', type, ledgerIgrfrange[0], ledgerIgrfrange[1], asOnDate).references(:ledger,:wkgltransaction).group('wk_ledgers.igrf_account_number').sum('wk_gl_transaction_details.amount')
 		end
 		profitHash = calculateBalance(detailHash['c'], detailHash['d'], ledgerType[0])

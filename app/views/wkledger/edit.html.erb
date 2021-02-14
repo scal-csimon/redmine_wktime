@@ -15,13 +15,32 @@
 				<tr>
 					<th align="left"><%= l(:label_type) %></th>
 					<td align="left" style="padding-left:40px;">
-						<%=h select_tag("ledger_type", options_for_select(ledgerType.invert,:selected => (@ledgersDetail[0].blank? ? "" : @ledgersDetail[0].ledger_type) ), :style => "width:160px; float:left;") %>
+						<%=h select_tag("ledger_type", options_for_select(ledgerType.invert,:selected => (@ledgersDetail[0].blank? ? "" : @ledgersDetail[0].ledger_type) ), :style => "float:left;") %>
 					</td>			   
 				</tr>
 			<% end %>
 			<tr>
 				<th align="left"><%= l(:label_opening_balance)  %></th>
 				<td align="left" style="padding-left:40px;"><%= (@ledgersDetail[0].blank? || @ledgersDetail[0].currency.blank? ? Setting.plugin_redmine_wktime['wktime_currency'] : @ledgersDetail[0].currency) + " "  %><%=h text_field_tag("opening_balance", (@ledgersDetail[0].blank? ? "" : @ledgersDetail[0].opening_balance),:size => 20, :maxlength => 14) %> </td>			   
+			</tr>
+		</table>	
+	</fieldset>
+	<fieldset class="box tabular" >
+		<legend>IGRF</legend>	
+		<table >
+			<tr>
+				<th align="left"><%= l(:field_igrf_number) %></th>
+				<td align="left" style="padding-left:40px;">
+					<%=h text_field_tag("igrf_account_number", (@ledgersDetail[0].blank? ? "" : @ledgersDetail[0].igrf_account_number),:size => 20) %>
+				</td>
+			</tr>
+			<tr>
+				<th align="left"><%= l(:label_igrf_description) %></th>
+				<td align="left" style="padding-left:40px;">
+					<td align="left" style="padding-left:40px;">
+						<%=h text_field_tag("igrf_account_description", (@ledgersDetail[0].blank? ? "" : @ledgersDetail[0].igrf_account_description),:size => 20) %>
+					</td>
+				</td>			   
 			</tr>
 		</table>	
 	</fieldset>

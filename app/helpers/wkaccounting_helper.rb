@@ -208,8 +208,14 @@ include WktimeHelper
 		balHash = Hash.new
 		ledgers = WkLedger.where(:ledger_type => ledgerType).order(:igrf_account_number)
 		ledgers.each do |ledger|
-			unless profitHash[ledger.id].blank? && (ledger.opening_balance.blank? || ledger.opening_balance == 0)
-				balHash[ledger.igrf_account_number + " - " + ledger.igrf_account_description] = (profitHash[ledger.id].blank? ? 0 : profitHash[ledger.id]) + ((ledger.opening_balance.blank? || ledger.ledger_type == 'SY') ? 0 : ledger.opening_balance)
+			unless profitHash[ledger.igrf_account_number].blank? && (ledger.opening_balance.blank? || ledger.opening_balance == 0)
+            	key= ""
+            	unless ledger.igrf_account_number.blank?
+            		key = ledger.igrf_account_number.to_s + " - " + ledger.igrf_account_description
+                else
+                	key= "Null"
+                end
+				balHash[key] = (profitHash[ledger.igrf_account_number].blank? ? 0 : profitHash[ledger.igrf_account_number]) + ((ledger.opening_balance.blank? || ledger.ledger_type == 'SY') ? 0 : ledger.opening_balance)
 			end
 		end
 		balHash

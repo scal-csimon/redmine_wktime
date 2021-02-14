@@ -33,7 +33,7 @@
 				total = 0
 				@ledgerArr = ['C', 'L', 'CL', 'SP', 'PL', 'FA', 'CA']
 				@ledgerArr.each do |type|
-					@mainEnriesHash[type] = getEachLedgerBSAmt(@to, [type])
+					@mainEnriesHash[type] = getEachLedgerBSAmtIGRF(@to, [type])
 					@subEntriesHash[type] = getSubEntriesIGRF(@from, @to, type)
 					if type == 'PL'
 						defLedgerEnries = getEachLedgerSumAmt(@from, @to, ['SY'])

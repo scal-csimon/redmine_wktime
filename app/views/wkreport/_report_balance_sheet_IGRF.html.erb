@@ -31,7 +31,7 @@
 				@subEntriesHash = Hash.new
 				@mainTotalHash = Hash.new
 				total = 0
-				@ledgerArr = ['C', 'L', 'CL', 'SP', 'PL', 'FA', 'CA']
+				@ledgerIGRFArr = ['Actifs à court terme', 'Immobilisations', 'Actifs à long terme', 'Passifs à court terme','Passifs à long terme', 'Capitaux propres', 'Bénéfices non répartis / déficit']
 				@ledgerArr.each do |type|
 					@mainEnriesHash[type] = getEachLedgerBSAmtIGRF(@to, [type])
 					@subEntriesHash[type] = getSubEntriesIGRF(@from, @to, type)
@@ -53,30 +53,22 @@
 			%>
 			<tr style="vertical-align: top;">
 				<td style="border-style: solid;border-width: thin;">
-					<table style="width:100%; border-collapse: collapse;">
-						<thead bgcolor="#e6e6e6">
-							<tr>
-								<th align="left" width="65%" style="padding-left: 25px;"></th>
-								<th colspan="2" align="right" width="35%"></th>
-							</tr>
-						</thead>
-						<body>
-							<%= render partial: "rpt_sections", locals: { from: 5, to:6, title: l(:label_of_funds,l(:label_application)) + " : " }%>
-						</body>
-					</table>
+					<%= render partial: "rpt_sections", locals: { from: 0, to:2, title: "Actifs" + " : " }%>
 				</td>
+			</tr>
+			<tr style="vertical-align: top;">
 				<td style="border-style: solid;border-width: thin;">
-					<table style="width:100%; border-collapse: collapse;">
-						<thead bgcolor="#e6e6e6">
-							<tr>
-								<th align="left" width="65%" style="padding-left: 25px;"></th>
-								<th colspan="2" align="right" width="35%"></th>
-							</tr>
-						</thead>
-						<body>
-							<%= render partial: "rpt_sections", locals: { from: 0, to:4, title: l(:label_of_funds,l(:label_copy_source)) + " : " }%>
-						</body>
-					</table>
+					<%= render partial: "rpt_sections", locals: { from: 3, to:4, title: "Passifs" + " : " }%>
+				</td>
+			</tr>
+			<tr style="vertical-align: top;">
+				<td style="border-style: solid;border-width: thin;">
+					<%= render partial: "rpt_sections", locals: { from: 5, to:5, title: "Capitaux Propre" + " : " }%>
+				</td>
+			</tr>
+			<tr style="vertical-align: top;">
+				<td style="border-style: solid;border-width: thin;">
+					<%= render partial: "rpt_sections", locals: { from: 6, to:6, title: "Bénéfices non répartis / déficit" + " : " }%>
 				</td>
 			</tr>
 		</body>

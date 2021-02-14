@@ -16,7 +16,7 @@
 		}
  </style>
 <div id="attn-rpt-dlg", style="overflow-x:auto;">
-	<table style="width:100%; border-collapse: collapse; table-layout:fixed;">
+	<table style="width:99%; border-collapse: collapse; table-layout:fixed;">
 		 <caption style="text-align:center"><b><%= getMainLocation %><br><%= l(:report_balance_sheet) %></b></br>
 		 <%= l(:label_as_at) + " " + @to.to_formatted_s(:long) %>
 		<thead bgcolor="#e6e6e6">
@@ -52,7 +52,7 @@
 				end
 			%>
 			<tr style="vertical-align: top;">
-				<td style="max-width:50%;width:50%;">
+				<td style="border-style: solid;border-width: thin;">
 					<table style="width:100%; border-collapse: collapse;">
 						<thead bgcolor="#e6e6e6">
 							<tr>
@@ -65,7 +65,7 @@
 						</body>
 					</table>
 				</td>
-				<td style="max-width:50%">
+				<td style="border-style: solid;border-width: thin;">
 					<table style="width:100%; border-collapse: collapse;">
 						<thead bgcolor="#e6e6e6">
 							<tr>

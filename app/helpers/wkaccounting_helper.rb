@@ -209,7 +209,7 @@ include WktimeHelper
 		ledgers = WkLedger.where(:ledger_type => ledgerType).order(:igrf_account_number)
 		ledgers.each do |ledger|
 			unless profitHash[ledger.id].blank? && (ledger.opening_balance.blank? || ledger.opening_balance == 0)
-				balHash[ledger.igrf_account_number + " - " ledger.igrf_account_description] = (profitHash[ledger.id].blank? ? 0 : profitHash[ledger.id]) + ((ledger.opening_balance.blank? || ledger.ledger_type == 'SY') ? 0 : ledger.opening_balance)
+				balHash[ledger.igrf_account_number + " - " + ledger.igrf_account_description] = (profitHash[ledger.id].blank? ? 0 : profitHash[ledger.id]) + ((ledger.opening_balance.blank? || ledger.ledger_type == 'SY') ? 0 : ledger.opening_balance)
 			end
 		end
 		balHash

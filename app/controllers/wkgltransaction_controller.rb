@@ -257,7 +257,7 @@ class WkgltransactionController < WkaccountingController
 				end
 			}
 			format.api{
-				if errorMsg.blank?	
+				if !errorMsg.blank?	
 					@error_messages = errorMsg.split('\n')	
 					render :template => 'common/error_messages.api', :status => :unprocessable_entity, :layout => nil
 				end

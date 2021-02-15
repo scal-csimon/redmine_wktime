@@ -31,8 +31,8 @@
 				@subEntriesHash = Hash.new
 				@mainTotalHash = Hash.new
 				total = 0
-				@ledgerIGRFArr = getLedgerIGRFType
-				@ledgerIGRFArr.each do |type|
+				@ledgerArr = getLedgerIGRFType
+				@ledgerArr.each do |type|
 					@mainEnriesHash[type] = getEachLedgerBSAmtIGRF(@to, type)
 					@subEntriesHash[type] = getSubEntriesIGRF(@from, @to, type)
 					if type == 'PL'

@@ -91,14 +91,14 @@ include WktimeHelper
 	
 	def getLedgerIGRFType
 		ledgerIGRFType = [
-			"Actifs à court terme"
-			"Immobilisations"
+			"Actifs à court terme",
+			"Immobilisations",
 			"Actifs à long terme" ,
 			"Passifs à court terme" ,
 			"Passifs à long terme",
 			"Capitaux propres",
-			"Bénéfices non répartis / déficit",
-		}
+			"Bénéfices non répartis / déficit"
+		]
 		ledgerIGRFType
 	end
 	def getLedgerIGRFTypeHash
@@ -144,9 +144,9 @@ include WktimeHelper
 	def getSubEntriesIGRF(from, asOnDate, ledgerType)
 		subEntriesHash = nil
 		bsEndDate = ledgerType == 'PL' ? from -1  : asOnDate
-		unless getLedgerTypeGrpHash[ledgerType].blank?
+		unless getLedgerIGRFTypeHash[ledgerType].blank?
 			subEntriesHash = Hash.new
-			getLedgerTypeGrpHash[ledgerType].each do |subType|
+			getLedgerIGRFTypeHash[ledgerType].each do |subType|
 				subEntriesHash[subType] = getEachLedgerBSAmtIGRF(bsEndDate, [subType])
 			end
 		end
@@ -231,7 +231,7 @@ include WktimeHelper
 			ledgerIgrfrange = getLedgerIGRFTypeHash[ledgerType]
 			detailHash[type] = WkGlTransactionDetail.includes(:ledger, :wkgltransaction).where('wk_gl_transaction_details.detail_type = ? and wk_ledgers.igrf_account_number BETWEEN ? and ? and wk_gl_transactions.trans_date <= ?', type, ledgerIgrfrange[0], ledgerIgrfrange[1], asOnDate).references(:ledger,:wkgltransaction).group('wk_ledgers.igrf_account_number').sum('wk_gl_transaction_details.amount')
 		end
-		profitHash = calculateBalance(detailHash['c'], detailHash['d'], ledgerType[0])
+		profitHash = calculateBalance(detailHash['c'], detailHash['d'], ledgerType)
 		balHash = Hash.new
 		ledgers = WkLedger.where(:ledger_type => ledgerType).order(:igrf_account_number)
 		ledgers.each do |ledger|

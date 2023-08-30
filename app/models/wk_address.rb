@@ -27,7 +27,7 @@ class WkAddress < ActiveRecord::Base
   end
   
   def fullAddress
-	fullAdd = (address1.blank? ? "" : address1 + "\n") + (address2.blank? ? "" : address2 + "\n")  + (city.blank? ? "" : city) + " " +  (state.blank? ? "" : state) + "\n" + (pin.blank? ? "" : pin.to_s )  + "\n" + (country.blank? ? "" : country)
+	fullAdd = (address1.blank? ? "" : address1 + "\n") + (address2.blank? ? "" : address2 + "\n")  + (city.blank? ? "" : city) + "\n" +  (state.blank? ? "" : state)  + "\n" + (country.blank? ? "" : country)
 	fullAdd
   end
 end

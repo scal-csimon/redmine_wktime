@@ -1,10 +1,35 @@
+
 api.array :wk_gl_transactions , api_meta(:total_count => @entry_count, :offset => @offset, :limit => @limit) do
   @transEntries.each do |entry|
+    transamount = 0
     api.entry do
       api.id entry.id
       api.trans_type entry.trans_type
 			api.trans_date entry.trans_date
 			api.comment entry.comment
+      
+      if @summaryTransaction == 'days'
+        transdts = entry.transaction_details || {}.values || []
+        api.array :wk_gl_transaction_details  do
+          transdts.each do |trdetail|
+            api.trans_detail do
+              api.item_id trdetail.try(:id)
+              api.parent_id trdetail.gl_transaction_id
+              api.ledger do
+                api.leger_id trdetail.ledger_id
+                api.leger_name trdetail.ledger.name
+              end
+              api.detail_type trdetail.detail_type
+              api.currency trdetail.currency
+              api.amount trdetail.amount
+            end
+            if trdetail.detail_type == entry.transaction_details[0].detail_type
+              transamount = transamount + trdetail.amount
+            end
+          end
+        end
+      end
+      api.amount transamount
     end
   end
 end

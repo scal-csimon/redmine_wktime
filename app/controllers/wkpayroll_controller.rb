@@ -131,7 +131,7 @@ class WkpayrollController < WkbaseController
 			LEFT JOIN users AS U ON U.id = S.user_id LEFT JOIN wk_users WU ON WU.user_id = U.id" + sql_contd + orderSQL)
 		
 		payroll_salaries.each do |entry|
-			payrollAmount << {:user_id => entry.user_id, :component_id => entry.salary_component_id, :amount => (entry.amount).round, 
+			payrollAmount << {:user_id => entry.user_id, :component_id => entry.salary_component_id, :amount => (entry.amount).round(2), 
 								:currency => entry.currency, :salary_date => entry.salary_date}
 		end
 	end
@@ -163,14 +163,14 @@ class WkpayrollController < WkbaseController
 					@payrollEntries[key][:currency] = payroll[:currency]
 					case s_cmpt.component_type
 					when "b"
-						@payrollEntries[key][:BT] = @payrollEntries[key][:BT].to_i + payroll[:amount].to_i
-						@payrollEntries[key][:details][:b] << [s_cmpt.name, payroll[:amount].to_i, payroll[:currency]]
+						@payrollEntries[key][:BT] = @payrollEntries[key][:BT].to_f + payroll[:amount].to_f
+						@payrollEntries[key][:details][:b] << [s_cmpt.name, payroll[:amount].to_f, payroll[:currency]]
 					when "a"
-						@payrollEntries[key][:AT] = @payrollEntries[key][:AT].to_i + payroll[:amount].to_i
-						@payrollEntries[key][:details][:a] << [s_cmpt.name, payroll[:amount].to_i, payroll[:currency]]
+						@payrollEntries[key][:AT] = @payrollEntries[key][:AT].to_f + payroll[:amount].to_f
+						@payrollEntries[key][:details][:a] << [s_cmpt.name, payroll[:amount].to_f, payroll[:currency]]
 					when "d"
-						@payrollEntries[key][:DT] = @payrollEntries[key][:DT] + payroll[:amount].to_i
-						@payrollEntries[key][:details][:d] << [s_cmpt.name, payroll[:amount].to_i, payroll[:currency]]
+						@payrollEntries[key][:DT] = @payrollEntries[key][:DT] + payroll[:amount].to_f
+						@payrollEntries[key][:details][:d] << [s_cmpt.name, payroll[:amount].to_f, payroll[:currency]]
 					end
 				end
 			end

@@ -205,6 +205,8 @@ class WkpaymententityController < WkbillingController
 		@payment.payment_type_id = params[:payment_type_id].to_i
 		@payment.reference_number = params[:reference_number]
 		@payment.description = params[:description]
+		@payment.gl_transaction_id = params[:gl_transaction_id].to_i unless params[:gl_transaction_id].blank?
+
 		totalAmount = 0
 		tothash = Hash.new
 		totalRow = params[:totalrow].to_i

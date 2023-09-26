@@ -65,7 +65,7 @@ module WkaccountingHelper
 				"Actifs à long terme" => "Actifs à long terme",
 				"Passifs à court terme"=> "Passifs à court terme",
 				"Passifs à long terme" => "Passifs à long terme",
-				"Revenus" => "Revenus"
+				"Revenus" => "Revenus",
             	"Coût des ventes" => "Coût des ventes",
             	"Frais d'exploitation" => "Frais d'exploitation",
             	"Revenus agricoles" => "Revenus agricoles",

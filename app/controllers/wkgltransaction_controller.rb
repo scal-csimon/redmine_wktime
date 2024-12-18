@@ -307,7 +307,7 @@ class WkgltransactionController < WkaccountingController
 		when 'S'
 			for i in 1..params[:txntotalrow].to_i
 				ledgerId = params["txn_particular_#{i}"]
-				ret = ledgerHash[ledgerId.to_i] == 'SA' ? true : false  if params["txn_debit_#{i}"].blank?
+				ret = ledgerHash[ledgerId.to_i] == 'SA' || ledgerHash[ledgerId.to_i] == 'SC' || ledgerHash[ledgerId.to_i] == 'SD' ? true : false  if params["txn_debit_#{i}"].blank?
 				ret = ledgerHash[ledgerId.to_i] == 'CS' || ledgerHash[ledgerId.to_i] == 'BA' || ledgerHash[ledgerId.to_i] == 'SC' || ledgerHash[ledgerId.to_i] == 'SD'  ? true : false  if !params["txn_debit_#{i}"].blank?
 				break if !ret			
 			end

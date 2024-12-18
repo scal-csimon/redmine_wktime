@@ -110,7 +110,8 @@ include WkdocumentHelper
 		actType ={
 			'C' =>  l(:label_call),
 			'M' =>  l(:label_meeting),
-			'T'  => l(:label_task)
+			'T'  => l(:label_task),
+			'E'  => "Email"
 		}
 		actType
 	end

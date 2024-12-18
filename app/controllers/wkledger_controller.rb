@@ -24,12 +24,13 @@ class WkledgerController < WkaccountingController
 
 
     def index
-		sort_init 'id', 'asc'
+		sort_init 'name', 'asc'
 		sort_update 'name' => "name",
 								'type' => "CASE WHEN wk_ledgers.ledger_type = 'SY' THEN '' ELSE ledger_type END"
 		set_filter_session
 		ledgerType = session[:wkledger].try(:[], :ledger_type)
 		name = session[:wkledger].try(:[], :name)
+    	igrf_account_number = session[:wkledger].try(:[], :igrf_account_number)
 		if !ledgerType.blank? && !name.blank?
 			ledger = WkLedger.where(:ledger_type => ledgerType).where("name like ?", "%#{name}%")
 		end
@@ -41,6 +42,9 @@ class WkledgerController < WkaccountingController
 		end
 		if ledgerType.blank? && name.blank?
 			ledger = WkLedger.all
+		end
+    	if !igrf_account_number.blank?
+			ledger = ledger.where(:igrf_account_number => igrf_account_number)
 		end
 		formPagination(ledger.reorder(sort_clause))
 		@ledgerdd = @ledgers.pluck(:name, :id)
@@ -100,7 +104,7 @@ class WkledgerController < WkaccountingController
 	def set_filter_session
 		if params[:searchlist] == controller_name
 			session[controller_name] = Hash.new if session[controller_name].nil?
-			filters = [:ledger_type, :name]
+			filters = [:ledger_type, :name,:igrf_account_number]
 			filters.each do |param|
 				if params[param].blank? && session[controller_name].try(:[], param).present?
 					session[controller_name].delete(param)

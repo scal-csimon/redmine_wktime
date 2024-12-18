@@ -120,7 +120,7 @@ module WkpayrollHelper
 		unless userSalaryHash.blank?
 			userSalaryHash.each do |userId, salary|
 				salary.each do |componentId, amount|
-					@payrollList << {:user_id => userId, :salary_component_id => componentId, :amount => amount.round, :currency => currency, :salary_date => salaryDate}
+					@payrollList << {:user_id => userId, :salary_component_id => componentId, :amount => amount.round(2), :currency => currency, :salary_date => salaryDate}
 				end
 		 	end
 			 errorMsg = SavePayroll(@payrollList,userIds,salaryDate) if isGeneratePayroll == "true"
@@ -563,7 +563,7 @@ module WkpayrollHelper
 			userSalary = WkSalary.new
 			userSalary.user_id = list[:user_id]
 			userSalary.currency = list[:currency]
-			userSalary.amount = (list[:amount]).round
+			userSalary.amount = (list[:amount]).round(2)
 			userSalary.salary_component_id = list[:salary_component_id]
 			userSalary.salary_date = list[:salary_date]
 				if !userSalary.save()

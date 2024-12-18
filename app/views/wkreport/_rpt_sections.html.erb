@@ -5,6 +5,7 @@
 </tr>
 
 <% total = 0 %>
+<% label_sub_total = "" %>
 <% for i in from..to %>
 	<% if @mainTotalHash[@ledgerArr[i]] != 0 %>
 		<tr style="width:100%;">
@@ -16,20 +17,27 @@
 			@subEntriesHash[@ledgerArr[i]].each do |key, subEntry|
 				unless subEntry.blank? || subEntry.values.inject(:+) == 0 %>
 					<tr style="width:100%;">
-						<td align="left" style="padding-left: 25px;"><b><%= getSectionHeader(key)%></b></td>
+						<td align="left" style="padding-left: 50px;"><b><%= getSectionHeader(key)%></b></td>
 						<td align="right"><b><%= "%.2f" % subEntry.values.inject(:+) %></b></td>
 						<td></td>
 					</tr>
-					<%= render partial: "rpt_rows", locals: { entries: subEntry, padding:50 }%>
+					<%= render partial: "rpt_rows", locals: { entries: subEntry, padding:75 }%>
 				<% end %>
 			<% end %>
 		<% end %>
 		<%= render partial: "rpt_rows", locals: { entries: @mainEnriesHash[@ledgerArr[i]] }%>
+		<% total = total + @mainTotalHash[@ledgerArr[i]] %>
+		<% label_sub_total = label_sub_total + (label_sub_total == "" ? "" : ",") + " " + getSectionHeader(@ledgerArr[i])  %>
+		<tr style="width:100%;">
+        	<td align="left" style="padding-left: 25px;"><b><%= l(:label_total) + " - " + label_sub_total +" : "%></b></td>
+        	<td style="border-top: solid thin;border-bottom: solid thin;"></td>
+        	<td align="right" style="border-top: solid thin;border-bottom: solid thin;"><b><%= "%.2f" % total %></b></td>
+    	</tr>
 	<% end %>
-	<% total = total + @mainTotalHash[@ledgerArr[i]] %>
+	
 <% end %>
 <tr style="width:100%;">
-	<td align="left" style="padding-left: 25px;" style=""><b><%= l(:label_total) + " : "%></b></td>
+	<td align="left" ><b><%= l(:label_total) + " : "%></b></td>
 	<td style="border-top: solid thin;border-bottom: solid thin;"></td>
 	<td align="right" style="border-top: solid thin;border-bottom: solid thin;"><b><%= "%.2f" % total %></b></td>
 </tr>

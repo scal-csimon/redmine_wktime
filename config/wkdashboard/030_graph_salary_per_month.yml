@@ -17,7 +17,7 @@ expenseDetail =
     WkGlTransactionDetail
     .joins('LEFT OUTER JOIN wk_ledgers on wk_ledgers.id = wk_gl_transaction_details.ledger_id')
     .joins('LEFT OUTER JOIN wk_gl_transactions on wk_gl_transactions.id = wk_gl_transaction_details.gl_transaction_id' )
-    .where('wk_ledgers.name like \\'6411%\\' and wk_gl_transactions.trans_date between ? and ?',  getFromDateTime(financial_period_start), getToDateTime(financial_period_end))
+    .where('(wk_ledgers.name like \\'6411%\\' or wk_ledgers.name like \\'6450%\\' or wk_ledgers.name like \\'6451%\\' or wk_ledgers.name like \\'6411%\\' or wk_ledgers.name like \\'6420%\\' or wk_ledgers.name like \\'6420%\\' or wk_ledgers.name like \\'6452%\\' or wk_ledgers.name like \\'6471%\\' or wk_ledgers.name like \\'6413%\\') and wk_gl_transactions.trans_date between ? and ?',  getFromDateTime(financial_period_start), getToDateTime(financial_period_end))
     .select('SUM(wk_gl_transaction_details.amount) AS sum_amount, wk_ledgers.id as ledger_id, wk_ledgers.ledger_type, wk_gl_transaction_details.detail_type, extract(year from wk_gl_transactions.trans_date) AS trans_year, extract(month from wk_gl_transactions.trans_date) AS trans_month ')
     .group('wk_ledgers.id, wk_ledgers.ledger_type, wk_gl_transaction_details.detail_type, extract(year from wk_gl_transactions.trans_date), extract(month from wk_gl_transactions.trans_date)')
     .order('trans_year, trans_month'); 

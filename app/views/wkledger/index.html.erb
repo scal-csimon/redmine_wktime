@@ -23,6 +23,7 @@
 	<%=h hidden_field_tag('tab', controller_name) %>
 	<%	ledger_type =session[:wkledger].try(:[], :ledger_type) %>
 	<%	ledgername =session[:wkledger].try(:[], :name) %>
+	<%	igrf_account_number = session[:wkledger].try(:[], :igrf_account_number)%>
 	<fieldset>
 		<table>
 			<tr>
@@ -30,6 +31,8 @@
 				<td><%= text_field_tag 'name', ledgername, :size => 30 %></td>
 				<th><label style="padding-left: 10px;"><%= l(:label_type) %></label></th>
 				<td><%=h select_tag("ledger_type", options_for_select(ledgerType.invert, :selected => ledger_type ), :style => "width:160px; ") %></td>
+            	<th><label style="padding-left: 10px;">IGRF Number</label></th>
+            	<td><%= number_field_tag 'igrf_account_number', igrf_account_number, in: 1000..9999 %></td>
 				<td><%= submit_tag l(:button_apply), :class => "small", :name => nil %></td>
 				<td><%= link_to l(:button_clear), {:controller => controller_name, :action => 'index', :tab => controller_name}, :class => 'icon icon-reload' %></td>
 			</tr>

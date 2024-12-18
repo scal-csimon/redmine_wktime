@@ -295,6 +295,7 @@ match 'updateAttendance', :controller => 'wktime', :action => 'updateAttendance'
 	get 'wkcrm/getActRelatedUrl', :to => 'wkcrm#getActRelatedUrl'
 
 	get 'wkcrmactivity/update', :to => 'wkcrmactivity#update'
+	post 'wkcrmactivity/update', :to => 'wkcrmactivity#update'
 
 	
 	delete 'wkcrmactivity/destroy', :to => 'wkcrmactivity#destroy'

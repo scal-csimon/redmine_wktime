@@ -514,12 +514,19 @@ class WkorderentityController < WkbillingController
 		  'wktime_invoice_components'
 	  end
 	  
+	  def getSupplierName(invoice)
+		getMainLocation
+	  end
+
 	  def getSupplierAddress(invoice)
-		  getMainLocation + "\n" +  getAddress
+		  getAddress
 	  end
 	  
+	  def getCustomerName(invoice)
+		invoice.parent.name 
+	  end
 	  def getCustomerAddress(invoice)
-		  invoice.parent.name + "\n" + (invoice.parent.address.blank? ? "" : invoice.parent.address.fullAddress)
+		  (invoice.parent.address.blank? ? "" : invoice.parent.address.fullAddress)
 	  end
 	  
 	  def getAutoPostModule	

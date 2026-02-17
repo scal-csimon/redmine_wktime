@@ -1,5 +1,5 @@
 # ERPmine - ERP for service industry
-# Copyright (C) 2011-2016  Adhi software pvt ltd
+# Copyright (C) 2011-2020  Adhi software pvt ltd
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -22,79 +22,87 @@ before_action :require_login
 include WktimeHelper
 before_action :check_perm_and_redirect, :only => [:index, :edit, :update, :destroy]
 
-	
+
 	def check_perm_and_redirect
 		unless check_permission
 			render_403
 			return false
 		end
 	end
-	
+
 	def check_permission
 		return validateERPPermission("M_BILL")
 	end
-	
+
 	def getOrderAccountType
 		'A'
 	end
-	
+
 	def getOrderContactType
 		'C'
 	end
-	
+
 	def getInvoiceType
 		'I'
 	end
-	
+
 	def needBlankProject
 		false
 	end
-	
+
 	def getAdditionalDD
-	end	
-	
-	def getPopulateChkBox	
 	end
-	
+
+	def getPopulateChkBox
+	end
+
 	def isInvGenUnbilledLink
 		false
 	end
-	
+
 	def isInvPaymentLink
 		false
 	end
-	
+
 	def getPaymentController
 		"wkpayment"
 	end
-	
+
 	def addAdditionalTax
 		false
 	end
-	
+
 	def addQuoteFields
 		false
 	end
-	
+
 	def needChangedProject
 		true
 	end
-	
+
 	def editInvNumber
 		false
 	end
-	
+
 	def getOrderNumberPrefix
 	end
-	
+
 	def getAccountDDLbl
-		l(:label_account)
+		l(:field_account)
 	end
-	
+
 	def getNewHeaderLbl
 	end
-	
+
 	def additionalContactType
 		true
+	end
+
+	def additionalAccountType
+		true
+	end
+
+	def isInvoiceController
+		false
 	end
 end

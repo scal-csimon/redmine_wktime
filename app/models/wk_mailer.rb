@@ -19,7 +19,7 @@ class WkMailer < ActionMailer::Base
 layout 'mailer'
 helper :application
 include Redmine::I18n
-  
+
 	def sendRejectionEmail(loginuser,user,wktime,unitLabel,unit)
 		set_language_if_valid(user.language)
 		if !unitLabel.blank?
@@ -36,61 +36,70 @@ include Redmine::I18n
 		body +="\n #{l(:label_wk_submittedon)} : #{wktime.submitted_on} \n #{l(:label_wk_rejectedby)} : #{loginuser.firstname} #{loginuser.lastname}"
 		body +="\n #{l(:label_wk_rejectedon)} : #{wktime.statusupdate_on} \n #{l(:label_wk_reject_reason)} : #{wktime.notes}"
 		body +="\n"
-		mail :from => loginuser.mail,:to => user.mail, :subject => subject,:body => body
+		mail :from => Setting.mail_from, :to => user.mails, :subject => subject,:body => body
 	end
-	  
+
 	def nonSubmissionNotification(user,startDate)
 		set_language_if_valid(user.language)
-		
+
 		subject = "#{l(:label_wk_nonsub_mail_subject)}" + " " + startDate.to_s
-		body = !Setting.plugin_redmine_wktime['wktime_nonsub_mail_message'].blank? ? 
+		body = !Setting.plugin_redmine_wktime['wktime_nonsub_mail_message'].blank? ?
 		Setting.plugin_redmine_wktime['wktime_nonsub_mail_message'] : "#{l(:nonsub_mail_message_content)}"
 		body += "\n #{l(:label_wk_submission_deadline)}" + " : " + "#{day_name(Setting.plugin_redmine_wktime['wktime_submission_deadline'].to_i)}"
 		body += "\n #{l(:field_name)} : #{user.firstname} #{user.lastname} "
 		body += "\n #{ l(:label_week) }" + " : " + startDate.to_s + " - " + (startDate+6).to_s
-		
-		mail :from => Setting.mail_from, :to => user.mail, :subject => subject, :body => body
+
+		mail :from => Setting.mail_from, :to => user.mails, :subject => subject, :body => body
 	end
-	
+
 	def submissionReminder(user, mngrArr, weeks, emailNotes, label_te)
 		set_language_if_valid(user.language)
-		
+
 		subject = l(:wk_submission_reminder, label_te)
 		body = l(:wk_sub_reminder_text, label_te) + "\n" + weeks.join("\n")
 		body += "\n" + emailNotes if !emailNotes.blank?
 		body += "\n"
-		
-		mail :from => User.current.mail, :to => user.mail, :reply_to => User.current.mail, 
+
+		mail :from => Setting.mail_from, :to => user.mails, :reply_to => User.current.mail,
 		:cc => (mngrArr.blank? ? nil : (mngrArr[0].blank? ? nil : mngrArr[0].mail)), :subject => subject, :body => body
 	end
-	
+
 	def approvalReminder(mgr, userList, emailNotes, label_te)
 		set_language_if_valid(mgr.language)
-		
-		subject = l(:wk_approval_reminder, label_te) 
+
+		subject = l(:wk_approval_reminder, label_te)
 		body = "#{l(:wk_appr_reminder_text, label_te)}" + "\n"
 		body += userList
 		body += "\n" + emailNotes if !emailNotes.blank?
 		body += "\n"
-		
-		mail :from => User.current.mail, :to => mgr.mail, :reply_to => User.current.mail, :subject => subject, :body => body
-	end
-	
-	def sendConfirmationMail(userList, isSub, label_te)
-		set_language_if_valid(User.current.language)
-		
-		subject = isSub ? l(:wk_submission_reminder, label_te) : l(:wk_approval_reminder, label_te)
-		body = (isSub ? "#{l(:wk_sub_confirmation_text, label_te)}" : "#{l(:wk_appr_confirmation_text, label_te)}" ) + "\n" + userList
-		
-		mail :from => User.current.mail, :to => User.current.mail, :subject => subject, :body => body
+
+		mail :from => Setting.mail_from, :to => mgr.mails, :reply_to => User.current.mail, :subject => subject, :body => body
 	end
 
-	def email_user(subject, language, email_id, emailNotes)
+	def sendConfirmationMail(userList, isSub, label_te)
+		set_language_if_valid(User.current.language)
+
+		subject = isSub ? l(:wk_submission_reminder, label_te) : l(:wk_approval_reminder, label_te)
+		body = (isSub ? "#{l(:wk_sub_confirmation_text, label_te)}" : "#{l(:wk_appr_confirmation_text, label_te)}" ) + "\n" + userList
+
+		mail :from => Setting.mail_from, :to => User.current.mails, :subject => subject, :body => body
+	end
+
+	def email_user(subject, language, email_id, emailNotes, ccMailId)
 
 		unless language.blank?
 			set_language_if_valid(language)
 		end
-
-		mail :from => User.current.mail, :to => email_id, :reply_to => User.current.mail, :subject => subject, :body => emailNotes
+		mail :from => Setting.mail_from, :to => email_id, :reply_to => User.current.mail, :subject => subject, :body => emailNotes, :cc => ccMailId
+	end
+	
+	def send_mail(data)
+		language = data[:language]
+		set_language_if_valid(language) if language.present?
+		begin
+			mail :from => Setting.mail_from, :to => data[:to], :reply_to => data[:reply_to], :subject => data[:subject], :body => data[:body], :cc => data[:cc]
+		rescue => e
+			Rails.logger.error "Mail send error: #{e.message}"
+		end
 	end
  end

@@ -1,0 +1,16 @@
+<%= javascript_include_tag 'index', plugin: "redmine_wktime" %>
+<%= stylesheet_link_tag 'wk-time', plugin: "redmine_wktime" %>
+
+<script type="text/javascript">
+    purRfqUrl = '<%=url_for(controller: "wkrfq", tab: "wkrfq")%>';
+    purQuoteUrl = '<%=url_for(controller: "wkquote", tab: "wkquote")%>';
+    purPurOrderUrl = '<%=url_for(controller: "wkpurchaseorder", tab: "wkpurchaseorder")%>';
+    purSupInvUrl = '<%=url_for(controller: "wksupplierinvoice", tab: "wksupplierinvoice")%>';
+	purSupPayUrl = '<%=url_for(controller: "wksupplierpayment", tab: "wksupplierpayment")%>';
+	purSupAccUrl = '<%=url_for(controller: "wksupplieraccount", tab: "wksupplieraccount")%>';
+	purSupContactUrl = '<%=url_for(controller: "wksuppliercontact", tab: "wksuppliercontact")%>';
+    prevTab = 'tab-<%= "#{controller_name}" %>';
+</script>
+
+<%= render_tabs time_expense_tabs %>
+<%= hidden_field_tag 'back_url', url_for(controller: params[:controller], action: params[:action]) %>

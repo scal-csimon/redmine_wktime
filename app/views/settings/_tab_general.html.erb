@@ -1,5 +1,8 @@
-	<% wktime_helper = Object.new.extend(WktimeHelper) %>
-	<% moduleArr = wktime_helper.erpModules %>
+<%
+	wktime_helper = Object.new.extend(WktimeHelper)
+	erpModules = wktime_helper.erpModules.invert
+	keys = erpModules.keys
+%>
 	<fieldset style="display: inline-block; vertical-align: top; height:100%; ">
 		<legend><%= l(:label_module_plural) %></legend>
 		<p id="pcheckall">
@@ -11,31 +14,60 @@
 			<%= check_box_tag("ckbCheckAll", 1, false, class: "checkall")%><%= l(:button_uncheck_all) %></label>
 		</p>
 		<p></p>
-		<% moduleArr.each do |translated, m| %>
-			<%  m = m.downcase %>
-			<p><label style="text-align: left; float:left;">
-				<%= check_box_tag "settings[wktime_enable_#{m}_module]", 1, @settings["wktime_enable_#{m}_module"].to_i == 1, :class => 'modules' -%>
-				<%= l_or_humanize(translated, :prefix => "erpmine_module_") %></label>
-			</p>
-		<% end %>
+
+		<div class="splitcontent">
+			<div class="splitcontentleft">
+				<% (0..(erpModules.length-1)).each do |index| %>
+					<% if index == 10 %>
+						</div>
+						<div class="splitcontentright">
+						<fieldset>
+						<legend><%= l(:label_hr) %></legend>
+					<% end %>
+					<%
+						translated = erpModules[keys[index]]
+						m = (keys[index]).downcase
+					%>
+					<p><label style="text-align: left; float:left;">
+						<%= check_box_tag "settings[wktime_enable_#{m}_module]", 1, @settings["wktime_enable_#{m}_module"].to_i == 1, :class => 'modules' -%>
+						<%= l_or_humanize(translated, :prefix => "erpmine_module_") %></label>
+					</p>
+				<% end %>
+				</fieldset>
+			</div>
+		</div>
 	</fieldset>
-	<fieldset style="display: inline-block; vertical-align: top; min-width: 100px; height:320px; width:600px;">
+	<fieldset style="display: inline-block; vertical-align: top; min-width: 600px;">
 		<legend><%= l(:label_general) %></legend>
 		<p style="padding-left:220px;"><label><%= l(:label_financial_year_start) %></label>
 			<%= select_tag 'settings[wktime_financial_year_start]', options_for_select((l('date.month_names').collect.with_index.to_a), :selected =>  @settings['wktime_financial_year_start']) %>
 	    </p>
 		<% wkexpense_helper = Object.new.extend(WkexpenseHelper) %>
 		<p style="padding-left:220px;">
-			<label><%= l(:label_wk_currency) %></label>
+			<label><%= l(:field_currency) %></label>
 			<%=h select_tag('settings[wktime_currency]',options_for_select(wkexpense_helper.options_for_currency,:selected => @settings['wktime_currency'])) %>
-		</p>
-		<p style="padding-left:220px;">
-		  <label><%= l(:label_wk_header_logo) %></label><%= text_field_tag 'settings[wktime_header_logo]', @settings['wktime_header_logo']%>
 		</p>
 		<p style="padding-left:220px;">
 			<%= check_box_tag('settings[label_no_additional_details_for_issue]', 1, @settings['label_no_additional_details_for_issue'].to_i == 1)%> <label><%= l(:label_no_additional_details_for_issue) %> </label>
 		</p>
 		<p style="padding-left:220px;">
 			<%= check_box_tag('settings[label_no_additional_details_for_user]', 1, @settings['label_no_additional_details_for_user'].to_i == 1)%> <label><%= l(:label_no_additional_details_for_user) %> </label>
+		</p>
+		<p style="padding-left:245px;">
+			<label><%= l(:label_enable_issue_logger) %> <%= check_box_tag('settings[label_enable_issue_logger]', 1, @settings['label_enable_issue_logger'].to_i == 1)%></label>
+		</p>
+		<p style="padding-left:220px;">
+		  <label><%= l(:label_mapbox_apikey) %></label><%= text_field_tag 'settings[label_mapbox_apikey]', @settings['label_mapbox_apikey']%>
+		</p>
+		<p style="padding-left:220px;"> <%= l(:label_api_key_info) %>&nbsp;<%= link_to "Mapbox", 'https://account.mapbox.com' %></p>
+		<p style="padding-left:220px;">
+			<%= check_box_tag('settings[invoice_auto_round_gl]', 1, @settings['invoice_auto_round_gl'].to_i == 1) %> <label><%= l(:label_auto_round_gl) %></label>
+		</p>
+		<p style="padding-left:220px;">
+			<%= check_box_tag('settings[wktime_hide_amount_in_words]', 1, @settings['wktime_hide_amount_in_words'].to_i == 1) %> <label><%= l(:label_hide_amount_in_words) %></label>
+		</p>
+		<p style="padding-left:220px;">
+			<%= check_box_tag 'settings[wk_dashboard_as_home]', '1', @settings['wk_dashboard_as_home'].to_i == 1, id: "wk_dashboard_as_home" %>
+			<label for="wk_dashboard_as_home"> <%= l(:label_dashboard_as_home) %></label>
 		</p>
 	</fieldset>

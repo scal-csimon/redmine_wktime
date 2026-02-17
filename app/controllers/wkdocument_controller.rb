@@ -1,27 +1,33 @@
+# ERPmine - ERP for service industry
+# Copyright (C) 2011-2020  Adhi software pvt ltd
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 class WkdocumentController < WkbaseController
-  unloadable
+
   before_action :find_attachment, :only => [:destroy, :download]
   include WkdocumentHelper
   helper :attachments
-  
+
   def new
   end
 
   def save
     errMsg = ''
     if params[:attachments].present?
-      params[:attachments].each do |atch_param|
-        attachment = Attachment.find_by_token(atch_param[1][:token])
-        next if attachment.blank?
-        attachment.container_type = params[:container_type]
-        attachment.container_id = params[:container_id]
-        attachment.filename = attachment.filename
-        attachment.description = atch_param[1][:description]
-        attachment.save
-        unless attachment.save
-          errMsg += attachment.errors.full_messages.to_s
-        end
-      end
+      errMsg = save_attachments()
     else
       errMsg = l(:error_invalid_document)
     end
@@ -35,29 +41,21 @@ class WkdocumentController < WkbaseController
   end
 
   def download
-    if !(validateERPPermission("B_CRM_PRVLG") || validateERPPermission("A_CRM_PRVLG"))
-      render_403
-    else
-      @attachment.increment_download
-      send_file @attachment.diskfile, :filename => filename_for_content_disposition(@attachment.filename),
+    @attachment.increment_download
+    send_file @attachment.diskfile, :filename => filename_for_content_disposition(@attachment.filename),
                                       :type => detect_content_type(@attachment),
                                       :disposition => disposition(@attachment) if stale?(:etag => @attachment.digest)
-    end
   end
 
   def destroy
-    if validateERPPermission("A_CRM_PRVLG")
-      container_id = @attachment.container_id
+    container_id = @attachment.container_id
       container_type = @attachment.container_type
       if @attachment.destroy
         flash[:notice] = l(:notice_successful_delete)
       else
         flash[:error] = account.errors.full_messages.join("<br>")
       end
-      redirect_to getRedirectUrl(container_id, container_type)
-    else
-      render_403
-    end
+      redirect_to :back
   end
 
   def find_attachment
@@ -72,7 +70,7 @@ class WkdocumentController < WkbaseController
     end
     content_type.to_s
   end
-  
+
   def disposition(attachment)
     if attachment.is_pdf?
       'inline'

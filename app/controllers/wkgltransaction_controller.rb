@@ -1,5 +1,5 @@
 # ERPmine - ERP for service industry
-# Copyright (C) 2011-2016  Adhi software pvt ltd
+# Copyright (C) 2011-2020  Adhi software pvt ltd
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -16,11 +16,12 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 class WkgltransactionController < WkaccountingController
-  unloadable
+
   include WkgltransactionHelper
-  
-	 def index
-		sort_init 'id', 'asc'
+	accept_api_auth :index, :edit, :update
+
+	def index
+		sort_init 'trans_date', 'desc'
 		sort_update 'trans_date' => "trans_date",
 								'trans_type' => "trans_type"
 		@ledgers = WkLedger.order(:name).pluck(:name, :id)
@@ -57,18 +58,23 @@ class WkgltransactionController < WkaccountingController
 			transaction = transaction.where( :wk_gl_transaction_details => { :ledger_id => @ledgerId })
 			if @summaryTransaction != 'days'
 				if @summaryTransaction == 'month'
-					summary_by = 'extract(year from trans_date) , tmonth'
-					alice_name = 'tmonth, extract(year from trans_date) AS tyear'
+					summary_by = getDatePart('trans_date','year')+', tmonth'
+					alice_name = getDatePart('trans_date','year', 'tyear')+', tmonth'
 				elsif @summaryTransaction == 'week'
 					summary_by = 'tyear, tweek'
-					alice_name = 'tweek, tyear'
+					alice_name = 'tyear, tweek'
 				else @summaryTransaction == 'year'
-					summary_by = 'extract(year from trans_date)'
-					alice_name = 'extract(year from trans_date) AS tyear'
+					summary_by = getDatePart('trans_date','year')
+					alice_name = getDatePart('trans_date','year', 'tyear')
 				end
+
 				trans_date = transaction.minimum(:trans_date) - 1 unless transaction.minimum(:trans_date).blank?
 				@transDate = @from.blank? ? trans_date : @from -1
-				transaction = transaction.group(" #{summary_by}, detail_type, ledger_id").select(" #{alice_name}, detail_type, ledger_id, sum(amount) as amount").order(" #{summary_by}")
+				sort_direction = params[:sort].present? ? (params[:sort].split(':')[1] || "asc") : "desc"
+
+				order_val = alice_name.split(',').map{|item| (item.split('as').last).strip().to_s + " #{sort_direction}"}
+				transaction = transaction.group(" #{summary_by}, detail_type, ledger_id")
+					.select(" #{alice_name}, detail_type, ledger_id, sum(amount) as amount").order("#{order_val.join(',')}")
 				@summaryHash = Hash.new
 				debitTotal = 0
 				creditTotal = 0
@@ -81,6 +87,7 @@ class WkgltransactionController < WkaccountingController
 							beginning_date= Date.civil(entry.tyear, entry.tmonth, 1)
 							end_date = beginning_date.end_of_month
 						elsif @summaryTransaction == 'week'
+							entry.tyear = Date.valid_commercial?(entry.tyear, entry.tweek, 1) ? entry.tyear : entry.tyear - 1 if entry.tweek == 53
 							summary = (entry.tweek).to_s + "_week_"
 							beginning_date = Date.commercial(entry.tyear, entry.tweek, 1)
 							end_date = Date.commercial(entry.tyear, entry.tweek, 7)
@@ -91,12 +98,19 @@ class WkgltransactionController < WkaccountingController
 						end
 						key = (summary).to_s + (entry.tyear).to_s
 						@summaryHash[key] = Hash.new if @summaryHash[key].blank?
-						@summaryHash[key][:DT] = entry.amount if entry.detail_type == 'd'
-						@summaryHash[key][:CT] = entry.amount if entry.detail_type == 'c'
+						@summaryHash[key][:DT] = entry.amount + (@summaryHash[key][:DT] || 0) if entry.detail_type == 'd'
+						@summaryHash[key][:CT] = entry.amount + (@summaryHash[key][:CT] || 0) if entry.detail_type == 'c'
 						@summaryHash[key][:beginning_date] = beginning_date
 						@summaryHash[key][:end_date] = end_date
 						@summaryHash[key][:ledger_id] = entry.ledger_id
 					end
+				end
+
+				dup_summary = sort_direction == "desc" ? @summaryHash.to_a.reverse.to_h : @summaryHash
+				@summaryHashFirstKey = dup_summary.keys.first
+				dup_summary.each do |key, value|
+					getSummeryamount(key, value)
+					@summaryHash[key][:CB] = @closeBal
 				end
 			else
 				formPagination(transaction.reorder(sort_clause))
@@ -113,8 +127,9 @@ class WkgltransactionController < WkaccountingController
 		else
 			formPagination(transaction.reorder(sort_clause))
 		end
-   end
-   
+		transaction
+  	end
+
     def edit
 	    @transEntry = nil
 		@transDetails = nil
@@ -129,8 +144,8 @@ class WkgltransactionController < WkaccountingController
 			@transDetails = $temptxnDetail
 		end
     end
-   
-    def update
+
+	def update
 		set_transaction_session
 		errorMsg = nil
 		wkgltransaction = nil
@@ -145,38 +160,40 @@ class WkgltransactionController < WkaccountingController
 			wkgltransaction.trans_type = params[:txn_type]
 			wkgltransaction.trans_date = params[:date]
 			wkgltransaction.comment = params[:txn_cmt]
-			
+
 			unless wkgltransaction.valid?
 				errorMsg = wkgltransaction.errors.full_messages.join("<br>")
 			end
 			if errorMsg.blank?
-				for i in 1..params[:txntotalrow].to_i			
-					if params["txn_id#{i}"].blank?
+				for i in 1..params[:txntotalrow].to_i
+					if params["txn_id_#{i}"].blank?
 						wktxnDetail = WkGlTransactionDetail.new
 					else
-						wktxnDetail = WkGlTransactionDetail.find(params["txn_id#{i}"].to_i)
-						
+						wktxnDetail = WkGlTransactionDetail.find(params["txn_id_#{i}"].to_i)
+
 					end
-					wktxnDetail.ledger_id = params["txn_particular#{i}"]
-					if (params["txn_debit#{i}"].blank? || params["txn_debit#{i}"].to_i == 0) && (params["txn_credit#{i}"].blank? || params["txn_credit#{i}"].to_i == 0)
+					wktxnDetail.ledger_id = params["txn_particular_#{i}"]
+					if (params["txn_debit_#{i}"].blank? || params["txn_debit_#{i}"].to_f == 0) && (params["txn_credit_#{i}"].blank? || params["txn_credit_#{i}"].to_f == 0)
 						next
-					elsif params["txn_debit#{i}"].blank? || params["txn_debit#{i}"].to_i == 0
+					elsif params["txn_debit_#{i}"].blank? || params["txn_debit_#{i}"].to_f == 0
 						wktxnDetail.detail_type = 'c'
-						wktxnDetail.amount = params["txn_credit#{i}"]
+						wktxnDetail.amount = params["txn_credit_#{i}"]
 					else
 						wktxnDetail.detail_type = 'd'
-						wktxnDetail.amount = params["txn_debit#{i}"]
+						wktxnDetail.amount = params["txn_debit_#{i}"]
 					end
 					wktxnDetail.currency = Setting.plugin_redmine_wktime['wktime_currency']
-					unless wktxnDetail.valid? 		
+					unless wktxnDetail.valid?
 						errorMsg = errorMsg.blank? ? wktxnDetail.errors.full_messages.join("<br>") : wktxnDetail.errors.full_messages.join("<br>") + "<br/>" + errorMsg
 					else
-						if i == 1 
-							wkgltransaction.save() 
+						if i == 1
+							wkgltransaction.save()
+							#for attachment save
+							errorMsg = save_attachments(wkgltransaction.id) if params[:attachments].present?
 						end
 						wktxnDetail.gl_transaction_id = wkgltransaction.id
 						wktxnDetail.save() unless wktxnDetail.amount.blank?
-						
+
 						arrId << wktxnDetail.id
 					end
 
@@ -186,7 +203,6 @@ class WkgltransactionController < WkaccountingController
 				end
 			end
 		else
-			
 			case params[:txn_type]
 			when 'C'
 				errorMsg = l(:error_contra_msg)
@@ -205,18 +221,30 @@ class WkgltransactionController < WkaccountingController
 			end
 			#errorMsg = l(:label_transaction) + " " + l('activerecord.errors.messages.invalid')
 		end
-		if errorMsg.blank?
-			action_name = params[:gltransaction_save_continue].blank? ? "index" : "edit"
-		    redirect_to :controller => 'wkgltransaction', :action => action_name, :tab => 'wkgltransaction'			
-			$temptxnDetail = nil
-			$tempTransaction = nil
-		    flash[:notice] = l(:notice_successful_update)
-		else
-			flash[:error] = errorMsg #wkaccount.errors.full_messages.join("<br>")
-		    redirect_to :controller => 'wkgltransaction',:action => 'edit', :isError => true
+		respond_to do |format|
+			format.html {
+				if errorMsg.blank?
+					action_name = params[:gltransaction_save_continue].blank? ? "index" : "edit"
+						redirect_to :controller => 'wkgltransaction', :action => action_name, :tab => 'wkgltransaction'
+					$temptxnDetail = nil
+					$tempTransaction = nil
+						flash[:notice] = l(:notice_successful_update)
+				else
+					flash[:error] = errorMsg
+						redirect_to :controller => 'wkgltransaction',:action => 'edit', :isError => true
+				end
+			}
+			format.api{
+				if errorMsg.blank?
+					render :plain => errorMsg, :layout => nil
+				else
+					@error_messages = errorMsg.split('\n')
+					render :template => 'common/error_messages', :format => [:api], :status => :unprocessable_entity, :layout => nil
+				end
+			}
 		end
-    end
-	
+	end
+
 	def validateTransaction
 		ret = true
 		txnDebitTotal = 0
@@ -224,70 +252,70 @@ class WkgltransactionController < WkaccountingController
 		@tempwktxnDetail ||= Array.new
 		@tempwkgltransaction = nil
 		ledgerArray = WkLedger.pluck(:id, :ledger_type)
-		ledgerHash = Hash[*ledgerArray.flatten]#.invert 
+		ledgerHash = Hash[*ledgerArray.flatten]#.invert
 		case params[:txn_type]
-		when 'C' 
+		when 'C'
 			for i in 1..params[:txntotalrow].to_i
-				ledgerId = params["txn_particular#{i}"]
+				ledgerId = params["txn_particular_#{i}"]
 				ret = ledgerHash[ledgerId.to_i] == 'CS' || ledgerHash[ledgerId.to_i] == 'BA' ? true : false
-				break if !ret			
+				break if !ret
 			end
-		
+
 		when 'P', 'R'
 			isledger = false
 			for i in 1..params[:txntotalrow].to_i
-				ledgerId = params["txn_particular#{i}"]
+				ledgerId = params["txn_particular_#{i}"]
 				if ledgerHash[ledgerId.to_i] == 'CS' || ledgerHash[ledgerId.to_i] == 'BA'
 					isledger = true
-					ret =  params["txn_debit#{i}"].blank? ? true : false if params[:txn_type] == 'P' 
-					ret =  !params["txn_debit#{i}"].blank? ? true : false if params[:txn_type] == 'R' 
+					ret =  params["txn_debit_#{i}"].blank? ? true : false if params[:txn_type] == 'P'
+					ret =  !params["txn_debit_#{i}"].blank? ? true : false if params[:txn_type] == 'R'
 				end
-				break if !ret			
-			end	
+				break if !ret
+			end
 			ret = isledger if ret
-		
+
 		when 'PR'
 			for i in 1..params[:txntotalrow].to_i
-				ledgerId = params["txn_particular#{i}"]
-				ret = ledgerHash[ledgerId.to_i] == 'PA' ? true : false  if !params["txn_debit#{i}"].blank?
-				ret = ledgerHash[ledgerId.to_i] == 'CS' || ledgerHash[ledgerId.to_i] == 'BA' || ledgerHash[ledgerId.to_i] == 'SC' || ledgerHash[ledgerId.to_i] == 'SD'  ? true : false  if params["txn_debit#{i}"].blank?				
-				break if !ret			
-			end			
-		
+				ledgerId = params["txn_particular_#{i}"]
+				ret = ledgerHash[ledgerId.to_i] == 'PA' ? true : false  if !params["txn_debit_#{i}"].blank?
+				ret = ledgerHash[ledgerId.to_i] == 'CS' || ledgerHash[ledgerId.to_i] == 'BA' || ledgerHash[ledgerId.to_i] == 'SC' || ledgerHash[ledgerId.to_i] == 'SD'  ? true : false  if params["txn_debit_#{i}"].blank?
+				break if !ret
+			end
+
 		when 'S'
 			for i in 1..params[:txntotalrow].to_i
-				ledgerId = params["txn_particular#{i}"]
-				ret = ledgerHash[ledgerId.to_i] == 'SA' ? true : false  if params["txn_debit#{i}"].blank?
-				ret = ledgerHash[ledgerId.to_i] == 'CS' || ledgerHash[ledgerId.to_i] == 'BA' || ledgerHash[ledgerId.to_i] == 'SC' || ledgerHash[ledgerId.to_i] == 'SD'  ? true : false  if !params["txn_debit#{i}"].blank?
-				break if !ret			
+				ledgerId = params["txn_particular_#{i}"]
+				ret = ledgerHash[ledgerId.to_i] == 'SA' ? true : false  if params["txn_debit_#{i}"].blank?
+				ret = ledgerHash[ledgerId.to_i] == 'CS' || ledgerHash[ledgerId.to_i] == 'BA' || ledgerHash[ledgerId.to_i] == 'SC' || ledgerHash[ledgerId.to_i] == 'SD'  ? true : false  if !params["txn_debit_#{i}"].blank?
+				break if !ret
 			end
-		
+
 		when 'CN'
 			for i in 1..params[:txntotalrow].to_i
-				ledgerId = params["txn_particular#{i}"]
-				ret = ledgerHash[ledgerId.to_i] != 'CS' || ledgerHash[ledgerId.to_i] != 'BA' ? true : false  if !params["txn_debit#{i}"].blank?
-				ret = ledgerHash[ledgerId.to_i] == 'CS' || ledgerHash[ledgerId.to_i] == 'BA' || ledgerHash[ledgerId.to_i] == 'SC' || ledgerHash[ledgerId.to_i] == 'SD'  ? true : false  if params["txn_debit#{i}"].blank?
-				break if !ret			
+				ledgerId = params["txn_particular_#{i}"]
+				ret = ledgerHash[ledgerId.to_i] != 'CS' || ledgerHash[ledgerId.to_i] != 'BA' ? true : false  if !params["txn_debit_#{i}"].blank?
+				ret = ledgerHash[ledgerId.to_i] == 'CS' || ledgerHash[ledgerId.to_i] == 'BA' || ledgerHash[ledgerId.to_i] == 'SC' || ledgerHash[ledgerId.to_i] == 'SD'  ? true : false  if params["txn_debit_#{i}"].blank?
+				break if !ret
 			end
-		
+
 		when 'DN'
 			for i in 1..params[:txntotalrow].to_i
-				ledgerId = params["txn_particular#{i}"]				 
-				ret = ledgerHash[ledgerId.to_i] != 'CS' || ledgerHash[ledgerId.to_i] != 'BA' ? true : false  if params["txn_debit#{i}"].blank?
-				ret = ledgerHash[ledgerId.to_i] == 'CS' || ledgerHash[ledgerId.to_i] == 'BA' || ledgerHash[ledgerId.to_i] == 'SC' || ledgerHash[ledgerId.to_i] == 'SD'  ? true : false  if !params["txn_debit#{i}"].blank?				
-				break if !ret			
+				ledgerId = params["txn_particular_#{i}"]
+				ret = ledgerHash[ledgerId.to_i] != 'CS' || ledgerHash[ledgerId.to_i] != 'BA' ? true : false  if params["txn_debit_#{i}"].blank?
+				ret = ledgerHash[ledgerId.to_i] == 'CS' || ledgerHash[ledgerId.to_i] == 'BA' || ledgerHash[ledgerId.to_i] == 'SC' || ledgerHash[ledgerId.to_i] == 'SD'  ? true : false  if !params["txn_debit_#{i}"].blank?
+				break if !ret
 			end
 		end
-		
+
 		for i in 1..params[:txntotalrow].to_i
-			txnDebitTotal = txnDebitTotal + params["txn_debit#{i}"].to_i if !params["txn_debit#{i}"].blank?
-			txnCreditTotal = txnCreditTotal + params["txn_debit#{i}"].to_i if !params["txn_debit#{i}"].blank?
+			txnDebitTotal = txnDebitTotal + params["txn_debit_#{i}"].to_f if !params["txn_debit_#{i}"].blank?
+			txnCreditTotal = txnCreditTotal + params["txn_debit_#{i}"].to_f if !params["txn_debit_#{i}"].blank?
 		end
-		
+
 		if ret
-			ret = txnDebitTotal == txnCreditTotal && txnDebitTotal != 0  ? true : false			
+			ret = txnDebitTotal == txnCreditTotal && txnDebitTotal != 0  ? true : false
 		end
-		
+
 		#Repopulate the transaction page. Get and set the transaction and transaction detail values.
 		unless ret
 			if params[:gl_transaction_id].blank?
@@ -298,20 +326,20 @@ class WkgltransactionController < WkaccountingController
 			wkgltransaction.trans_type = params[:txn_type]
 			wkgltransaction.trans_date = params[:date]
 			wkgltransaction.comment = params[:txn_cmt]
-			for i in 1..params[:txntotalrow].to_i			
-				if params["txn_id#{i}"].blank?
+			for i in 1..params[:txntotalrow].to_i
+				if params["txn_id_#{i}"].blank?
 					wktxnDetail = WkGlTransactionDetail.new
 				else
-					wktxnDetail = WkGlTransactionDetail.find(params["txn_id#{i}"].to_i)
-					
+					wktxnDetail = WkGlTransactionDetail.find(params["txn_id_#{i}"].to_i)
+
 				end
-				wktxnDetail.ledger_id = params["txn_particular#{i}"]
-				if params["txn_debit#{i}"].blank?
+				wktxnDetail.ledger_id = params["txn_particular_#{i}"]
+				if params["txn_debit_#{i}"].blank?
 					wktxnDetail.detail_type = 'c'
-					wktxnDetail.amount = params["txn_credit#{i}"]
+					wktxnDetail.amount = params["txn_credit_#{i}"]
 				else
 					wktxnDetail.detail_type = 'd'
-					wktxnDetail.amount = params["txn_debit#{i}"]
+					wktxnDetail.amount = params["txn_debit_#{i}"]
 				end
 				wktxnDetail.currency = Setting.plugin_redmine_wktime['wktime_currency']
 				@tempwktxnDetail << wktxnDetail
@@ -320,30 +348,21 @@ class WkgltransactionController < WkaccountingController
 			$temptxnDetail = @tempwktxnDetail
 			$tempTransaction = wkgltransaction
 		end
-		
+
 		ret
 	end
-	
+
 	def destroy
 		trans = WkGlTransaction.find(params[:txn_id].to_i).destroy
 		flash[:notice] = l(:notice_successful_delete)
 		redirect_back_or_default :action => 'index', :tab => params[:tab]
 	end
-  
+
 	def set_filter_session
-		session[controller_name] = {:summary_trans => "days"} if session[controller_name].nil?
-		if params[:searchlist] == controller_name
-			filters = [:period_type, :period, :txn_ledger, :from, :to, :trans_type, :summary_trans]
-			filters.each do |param|
-				if params[param].blank? && session[controller_name].try(:[], param).present?
-					session[controller_name].delete(param)
-				elsif params[param].present?
-					session[controller_name][param] = params[param]
-				end
-			end
-		end
+		filters = [:period_type, :period, :txn_ledger, :from, :to, :trans_type, :summary_trans, :show_chart]
+		super(filters, {:summary_trans => "days"})
 	end
-   
+
    # Retrieves the date range based on predefined ranges or specific from/to param dates
 	def retrieve_date_range
 		@free_period = false
@@ -352,8 +371,8 @@ class WkgltransactionController < WkaccountingController
 		period = session[controller_name].try(:[], :period)
 		fromdate = session[controller_name].try(:[], :from)
 		todate = session[controller_name].try(:[], :to)
-		
-		if (period_type == '1' || (period_type.nil? && !period.nil?)) 
+
+		if (period_type == '1' || (period_type.nil? && !period.nil?))
 		    case period.to_s
 			  when 'today'
 				@from = @to = Date.today
@@ -387,22 +406,22 @@ class WkgltransactionController < WkaccountingController
 		    @free_period = true
 		else
 		  # default
-		  # 'current_month'		
+		  # 'current_month'
 			@from = Date.civil(Date.today.year, Date.today.month, 1)
 			@to = (@from >> 1) - 1
-	    end    
-		
+	    end
+
 		@from, @to = @to, @from if @from && @to && @from > @to
 
 	end
-	
+
 	def formPagination(entries)
 		@entry_count = entries.count
         setLimitAndOffset()
-		@transEntries = entries.order(trans_date: :desc).limit(@limit).offset(@offset)
+		@transEntries = entries.limit(@limit).offset(@offset)
 	end
-	
-	def setLimitAndOffset		
+
+	def setLimitAndOffset
 		if api_request?
 			@offset, @limit = api_offset_and_limit
 			if !params[:limit].blank?
@@ -415,22 +434,32 @@ class WkgltransactionController < WkaccountingController
 			@entry_pages = Paginator.new @entry_count, per_page_option, params['page']
 			@limit = @entry_pages.per_page
 			@offset = @entry_pages.offset
-		end	
+		end
 	end
-	
+
 	def set_transaction_session
 		session[controller_name][:start_date] = params[:date]
 		session[controller_name][:txn_type] = params[:txn_type]
-		session[controller_name][:ledger_id1] = params[:txn_particular1]
-		session[controller_name][:ledger_id2] = params[:txn_particular2]
+		session[controller_name][:ledger_id1] = params[:txn_particular_1]
+		session[controller_name][:ledger_id2] = params[:txn_particular_2]
 	end
 
 	def export
 		respond_to do |format|
-			index
+			transactionEntries = index
 			format.csv {
-				send_data(csv_format_conversion(@transEntries), :type => 'text/csv; header=present', :filename => 'gltransaction.csv')
+				send_data(csv_format_conversion(transactionEntries), :type => 'text/csv; header=present', :filename => 'gltransaction.csv')
 			}
 		end
 	end
+
+  def graph
+    data = get_Ledger_Graph_data
+    if data
+      render :json => data
+    else
+      render_404
+    end
+  end
+
 end

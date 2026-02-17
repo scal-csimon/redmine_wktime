@@ -23,6 +23,17 @@ $(document).ready(function(){
 		}
 		checked_modules();
 	});
+
+
+	$("form").submit(function() {
+		var leavelistbox=document.getElementById("settings_leave_settings");
+		if(leavelistbox != null){
+			for(i = 0; i < leavelistbox.options.length; i++){
+				leavelistbox.options[i].selected = true;
+			}						
+		}
+		
+	});
 });
 
 function dialogAction()
@@ -122,7 +133,7 @@ function dialogAction()
 		buttons: {
 			"Ok": function() {
 				var opt,desc="",opttext="";
-				var listBox = document.getElementById("settings_wktime_leave");
+				var listBox = document.getElementById("settings_leave_settings");
 				var leaveIssue = document.getElementById("leave_issue");
 				var leaveAccrual = document.getElementById("leave_accrual");
 				var accrualAfter = document.getElementById("leave_accrual_after");
@@ -315,7 +326,7 @@ function updateCustFldDD(currCFDD,anotherCFDD)
 
 	function showLeaveDialog(action)
 	{
-		var listbox = document.getElementById("settings_wktime_leave");
+		var listbox = document.getElementById("settings_leave_settings");
 		var leaveIssue = document.getElementById("leave_issue");
 		var leaveProject = document.getElementById("leave_project");
 		var leaveAccrual = document.getElementById("leave_accrual");
@@ -410,7 +421,7 @@ function updateCustFldDD(currCFDD,anotherCFDD)
 				btlistbox.options[i].selected = true;
 			}						
 		}
-		var lvlistbox=document.getElementById("settings_wktime_leave");
+		var lvlistbox=document.getElementById("settings_leave_settings");
 		if(lvlistbox != null)
          { 
 			for(i = 0; i < lvlistbox.options.length; i++)
@@ -456,6 +467,14 @@ function updateCustFldDD(currCFDD,anotherCFDD)
 			for(i = 0; i < siinvlistbox.options.length; i++)
 			{
 				siinvlistbox.options[i].selected = true;
+			}						
+		}
+		var salesQuoteList=document.getElementById("settings_wktime_sq_components");
+		if(salesQuoteList != null)
+         { 
+			for(i = 0; i < salesQuoteList.options.length; i++)
+			{
+				salesQuoteList.options[i].selected = true;
 			}						
 		}
 		
@@ -573,14 +592,10 @@ function updateCustFldDD(currCFDD,anotherCFDD)
 	function ValidateMinMaxHours(id, msg)
 	{
 		var maxhrfield = document.getElementById("settings_wktime_max_hour_day").value;
-		var minhrfield = document.getElementById("settings_wktime_min_hour_day").value;		
-		var maxhrdayrdb = document.getElementById("settings_wktime_restr_max_hour").checked ;
-		var minhrdayrdb = document.getElementById("settings_wktime_restr_min_hour").checked ;
-		var maxhrweekrdb = document.getElementById("settings_wktime_restr_max_hour_week").checked ;
-		var minhrweekrdb = document.getElementById("settings_wktime_restr_min_hour_week").checked ;
+		var minhrfield = document.getElementById("settings_wktime_min_hour_day").value;
 		var maxhrweekfield = document.getElementById("settings_wktime_max_hour_week").value;
 		var minhrweekfield = document.getElementById("settings_wktime_min_hour_week").value;
-		if((Number(maxhrfield) < Number(minhrfield) && maxhrdayrdb && minhrdayrdb && Number(maxhrfield) > 0) || (Number(maxhrweekfield) < Number(minhrweekfield) && maxhrweekrdb && minhrweekrdb && Number(maxhrweekfield) > 0) )
+		if((Number(maxhrfield) < Number(minhrfield) && Number(maxhrfield) > 0) || (Number(maxhrweekfield) < Number(minhrweekfield) && Number(maxhrweekfield) > 0) )
 		{
 			document.getElementById(id).value = "";
 			alert(msg);

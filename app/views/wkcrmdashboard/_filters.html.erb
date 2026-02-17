@@ -1,0 +1,11 @@
+<%= form_tag({}, method: :get, id: 'query_form') do %>
+	<%= hidden_field_tag "searchlist", controller_name %>
+	<fieldset>
+		<div style="display: flex; align-items: center; gap: 10px;padding-top: 5px;">
+			<%= render :partial => 'wktime/date_range' %>
+			<%= submit_tag l(:button_apply), :class => 'button-small', :name => 'submit' %>
+			<%= link_to sprite_icon('reload', l(:button_clear)), {tab: controller_name, clear: true}, :class => 'icon icon-reload' %>
+		</div>
+	</fieldset>
+<% end %>
+<%=  %>

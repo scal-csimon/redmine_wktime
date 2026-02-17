@@ -1,35 +1,54 @@
-<div id ="inventoryDiv" style="display:<%= invntItem.blank? ? 'none' : 'block' %>;" class="<%= controller.showAssetProperties ? 'splitcontentright' : 'splitcontentleft' %> ">
-	<% 
-	#isDisable = isTransfer 
+<div id ="inventoryDiv" class="<%= controller.showAssetProperties ? 'splitcontentright' : 'splitcontentleft' %> ">
+	<%
+	#isDisable = isTransfer
 	isDisable = isUsedInventoryItem(invntItem)
 	%>
 	<%	locationId = nil
 		currentParent = invntItem.blank? ? nil : invntItem.id
 		parentArr = parentArray(controller.getItemType, true, false, locationId, currentParent)
 	%>
-	<%  productItem = @productItem 
+	<%  productItem = @productItem
 		attributeSql = ""
 		unless productItem.blank?
 			sqlCond = " product_id = " + productItem.product_id.to_s
 		else
 			firstProduct = WkProduct.where(:product_type => controller.getItemType).order(:name).first
-			unless firstProduct.blank?		
-				attributeSql = " group_id = " + firstProduct.attribute_group_id.to_s 		
+			unless firstProduct.blank?
+				attributeSql = " group_id = " + firstProduct.attribute_group_id.to_s
 			end
-		end	
+		end
 	%>
+	<% invoice_no = invntItem&.supplier_invoice&.invoice_number %>
 	<fieldset class="box tabular">
 		<legend><%= isTransfer ? l(:button_transfer) : controller.lblInventory %></legend>
-		<table width='100%'>  
+		<table width='100%'>
 			<% if controller.showAssetProperties   %>
 			<tr>
-				<th align="left"><%= "Parent" %></th>
-				<td align="left" style="padding-left:40px;"><%=h select_tag("parent_id", options_for_select(parentArr, :selected => (invntItem.blank? ? (@parentEntry.blank? ? parentArr : @parentEntry.id) : invntItem.parent_id)), :disabled => isDisable && !isTransfer) %></td>
+				<th style="text-align: left"><%= l(:label_parent_revision) %></th>
+				<td style="text-align: left;padding-left:40px;"><%=h select_tag("parent_id", options_for_select(parentArr, :selected => (invntItem.blank? ? (@parentEntry.blank? ? parentArr : @parentEntry.id) : invntItem.parent_id)), :disabled => isDisable && !isTransfer) %></td>
 			</tr>
 			<% end %>
+			<% if invntItem.present? && !isTransfer%>
+				<tr>
+					<th style="text-align: left"><%= l(:label_sp_number) %></th>
+					<td style="text-align: left;padding-left:40px;">
+						<%= link_to invoice_no, {controller: 'wksupplierinvoice', action: 'edit', invoice_id: invntItem&.supplier_invoice&.id, new_invoice: false, preview_billing: false, tab: 'wksupplierinvoice', id: invntItem&.supplier_invoice&.id} if invoice_no.present? %>
+					</td>
+				</tr>
+				<tr>
+					<th style="text-align: left"></th>
+					<td style="text-align: left;padding-left:40px;">
+						<%= link_to l(:label_goods_receipt), {controller: 'wkshipment', action: 'edit', shipment_id: invntItem&.shipment_id, tab: 'wkshipment', id: invntItem&.shipment_id} if invntItem&.shipment&.shipment_type == 'I' %>
+					</td>
+				</tr>
+			<% end %>
 			<tr>
-				<th align="left"><%= l(:label_serial_number) %></th>
-				<td align="left" style="padding-left:40px;"><%= text_field_tag "serial_number",  invntItem.blank? ? '' : invntItem.serial_number, :disabled => isDisable || isTransfer %></td>
+				<th style="text-align: left"><%= l(:label_serial_number) %></th>
+				<td style="text-align: left;padding-left:40px;">
+					<% if controller.getItemType == 'I' %><div><b><%= l(:label_fixed) %>&emsp;<span style="padding-left:140px;"><%= l(:label_running) %></span></b></div><%end%>
+					<%= text_field_tag "serial_number",  invntItem.blank? ? '' : invntItem.serial_number, disabled: isDisable && !isTransfer %>&nbsp;
+					<%= text_field_tag "running_sn",  invntItem.blank? ? '' : invntItem.running_sn, disabled: isDisable && !isTransfer if controller.getItemType == 'I'%>&nbsp;&nbsp;
+					<span style="white-space: nowrap;" id='assigned_serial_no'><%= link_to l(:label_assigned_serial_numbers), "javascript:getAssignedSNs();" if controller.getItemType == 'I' %></span></td>
 			</tr>
 			<% inventoryHook = call_hook(:view_asset_inventory, :inventoryItem => invntItem) %>
 			<% if controller.showInventoryFields %>
@@ -38,32 +57,37 @@
 				<%#=  inventoryHook %>
 			<% end %>
 			<tr>
-				<th align="left"><%= l(:label_attribute) %></th>
-				<td align="left" style="padding-left:40px;">
+				<th style="text-align: left"><%= l(:label_attribute) %></th>
+				<td style="text-align: left;padding-left:40px;">
 					<%=h select_tag("product_attribute_id", generic_options_for_select(WkProductAttribute, attributeSql, 'name', 'name', 'id', invntItem.blank? ? '' : invntItem.product_attribute_id, true), :disabled => isDisable || isTransfer) %>
 				</td>
 			</tr>
 			<% if invntItem.blank? || invntItem.parent_id.blank? %>
 				<tr>
-					<th align="left"><%= l(:label_location) %></th>
-					<td align="left" style="padding-left:40px;">
-						<%=h select_tag("location_id", generic_options_for_select(WkLocation, nil, 'name', 'name', 'id', invntItem.blank? ? nil : invntItem.location_id, false), :disabled => isDisable && !isTransfer) %>
-						<% unless invntItem.blank? || isTransfer || controller.getItemType != 'I' %>
+					<th style="text-align: left"><%= l(:field_location) %></th>
+					<td style="text-align: left;padding-left:40px;">
+						<%=h select_tag("location_id", generic_options_for_select(WkLocation, nil, 'name', 'name', 'id', invntItem.blank? ? nil : invntItem.location_id, false), id: 'locationID', disabled: isDisable && !isTransfer) %>
+						<% if controller.getItemType == 'I' && invntItem.present? && !isTransfer && !@assembledComponent.present? %>
 									<%= link_to l(:button_transfer), url_for(:controller => controller_name, :action => 'transfer', :inventory_item_id => invntItem.id), :class => 'icon icon-bullet-go' %>
 						<% end %>
 					</td>
 				</tr>
 				<tr>
-					<th align="left"><%= l(:label_project) %></th>
-					<td align="left" style="padding-left:40px;">
-						<%=h select_tag("project_id", options_for_select(getProjects, :selected => invntItem.blank? ? "" : invntItem.project_id), :disabled => isDisable && !isTransfer) %>
+					<th style="text-align: left"><%= l(:label_project) %></th>
+					<td style="text-align: left;padding-left:40px;">
+						<%=h select_tag("project_id", options_for_select(get_projects, :selected => invntItem.blank? ? "" : invntItem.project_id), :disabled => isDisable && !isTransfer) %>
 					</td>
 				</tr>
 			<% end %>
 			<tr>
-				<th align="left"><%= l(:field_notes) %></th>
-				<td align="left" style="padding-left:40px;"><%= text_area_tag "notes",  invntItem.blank? ? '' : invntItem.notes, :disabled => isDisable && !isTransfer %></td>
-			</tr>  		
+				<th style="text-align: left"><%= l(:field_notes) %></th>
+				<td style="text-align: left;padding-left:40px;"><%= text_area_tag "notes",  invntItem.blank? ? '' : invntItem.notes, :disabled => isDisable && !isTransfer %></td>
+			</tr>
 		</table>
 	</fieldset>
 </div>
+
+<script>
+	var sn_blank_error = "<%=l(:warn_sn_blank) %>";
+	var sn_text_error = "<%=l(:warn_sn_text) %>";
+</script>

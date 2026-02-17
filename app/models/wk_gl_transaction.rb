@@ -15,18 +15,29 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-class WkGlTransaction < ActiveRecord::Base
-  unloadable
+class WkGlTransaction < ApplicationRecord
+
   has_many :transaction_details, foreign_key: "gl_transaction_id", class_name: "WkGlTransactionDetail", :dependent => :destroy
   has_one :invoice, foreign_key: "gl_transaction_id", class_name: "WkInvoice"
   has_many :gl_salaries, foreign_key: "gl_transaction_id", class_name: "WkGlSalary", :dependent => :destroy
   has_many :depreciations, foreign_key: "gl_transaction_id", class_name: "WkAssetDepreciation", :dependent => :nullify
   validates_presence_of :trans_date
-  
+  acts_as_attachable :view_permission => :view_files,
+                    :edit_permission => :manage_files,
+                    :delete_permission => :manage_files
+
   def trans_date=(date)
     super
-    self.tyear = trans_date ? trans_date.cwyear : nil
+    self.tyear = trans_date ? trans_date.year : nil
     self.tmonth = trans_date ? trans_date.month : nil
     self.tweek = trans_date ? Date.civil(trans_date.year, trans_date.month, trans_date.day).cweek : nil
   end
+
+  scope :getChartData, ->(from, to, ledger_id) {
+    joins(:transaction_details)
+    .select("tmonth, tyear, detail_type, sum(amount) as amount")
+    .where("trans_date between ? and ? and ledger_id = ?", from, to, ledger_id )
+    .group("tyear, tmonth, detail_type")
+    .order("tyear, tmonth")
+  }
 end

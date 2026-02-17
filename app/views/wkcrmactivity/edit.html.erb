@@ -1,8 +1,11 @@
-<h2><%= l(:text_edit_activity) %></h2>
-<%= render :partial => 'wkcrmactivity/activity_edit'%>
-<% unless @activityEntry.blank? %>
-	</br>
+<% @isReferral = params[:controller_from] == "wkreferrals" || @activityEntry&.first&.activity_type == "I" %>
+<h2><%= @activityEntry.present? && (@isReferral ? l(:label_edit_interview) : l(:text_edit_activity) ) || (@isReferral ? l(:label_new_interview) : controller.get_activity_label) %></h2>
+
+<%= form_tag({:controller => 'wkcrmactivity', :action => 'update'}, :method => :post, :id => 'query_form') do %>
+	<%= render :partial => 'wkcrmactivity/activity_edit'%>
+
 	<div>
-		<%= render partial: "wkcrm/accordion_section", locals: { currentObj: @activityEntry[0] } %>
+		<%= submit_tag l(:button_save) ,:id => 'wkactivity_save'%>
 	</div>
+
 <% end %>

@@ -1,18 +1,4 @@
 <%= stylesheet_link_tag 'wk-time', :plugin => "redmine_wktime" %>
- <%= form_tag({:controller => 'wkrfq', :action => 'index'}, :method => :post, :id => 'query_form') do %>
-	  <fieldset>
-		 <%=h hidden_field_tag('tab', "wkrfq") %>
-		 <label for='name'><%= l(:field_name) %>:</label>
-		 <%= text_field_tag 'rfqname', params[:rfqname], :size => 30 %>
-		 <label ><%= l(:label_date) %>:</label>
-		 <%=h date_field_tag('rfq_date',params[:rfq_date], :size => 10) %> <%= calendar_for('rfq_date') %>
-		 <%= submit_tag l(:button_apply), :class => "small", :name => nil %>
-		 <%= link_to l(:button_clear), {:controller => controller_name, :action => 'index', :tab => controller_name}, :class => 'icon icon-reload' %>
-	  </fieldset>
- <% end %>
- <div class="wk-contextual">
-        <%= link_to l(:label_new_rfq), url_for(:controller => controller_name, :action => 'edit'), :class => 'icon icon-time-add' %>
- </div>
 <div class="autoscroll">
 <table class="list time-entries">
   <thead>
@@ -30,13 +16,13 @@
           <tr>
 			  <td class="lbl-txt-align"><%=h entry.id %></td>
 		      <td class="lbl-txt-align"><%=h entry.name %></td>
-			  <td class="lbl-txt-align"><%=h getRfqStatusHash[entry.status]  %></td>
+			  <td class="lbl-txt-align colorcode-bg-setup col-status-<%= entry.status %>"><%=h getRfqStatusHash[entry.status]  %></td>
 			  <td class="lbl-txt-align"><%=h entry.start_date %></td>
 			  <td class="lbl-txt-align"><%=h entry.end_date  %></td>
 			  <td align="center">
-                 <%= link_to image_tag('edit.png'), {:controller => controller.controller_name, :action => 'edit', :rfq_id => entry.id}, :title => l(:button_edit) %> 
+                 <%= link_to sprite_icon('edit'), {:controller => controller.controller_name, :action => 'edit', :rfq_id => entry.id, id: entry.id}, :title => l(:button_edit) %>
 				 <% if controller.deletePermission %>
-					<%= link_to image_tag('delete.png'), {:controller => controller.controller_name, :action => 'destroy', :rfq_id => entry.id, :tab => controller.controller_name},  :data => {:confirm => l(:text_are_you_sure)}, :method => :delete, :title => l(:button_delete) %>
+					<%= link_to sprite_icon('del'), {:controller => controller.controller_name, :action => 'destroy', :rfq_id => entry.id, :tab => controller.controller_name, id: entry.id},  :data => {:confirm => l(:text_are_you_sure)}, :method => :delete, :title => l(:button_delete) %>
 				<% end %>
 			  </td>
 		 </tr>

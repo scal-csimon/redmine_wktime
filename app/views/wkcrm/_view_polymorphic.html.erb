@@ -1,22 +1,22 @@
 <%= javascript_include_tag 'index', :plugin => "redmine_wktime" %>
 <script type="text/javascript"> 
-	actRelatedUrl="<%= "#{url_for(:controller => "wkcrm", :action => 'getActRelatedIds', :additionalContactType => controller.additionalContactType )}" %>";
-	accountUrl="<%= "#{url_for(:controller => "wkinvoice", :action => 'getAccountProjIds')}" %>";
+	actRelatedUrl="<%= "#{url_for(:controller => "wkcrm", :action => 'get_act_related_ids', :additionalContactType => controller.additionalContactType, :additionalAccountType => controller.additionalAccountType )}" %>";
+	accountUrl="<%= "#{url_for(:controller => "wkinvoice", :action => 'get_account_proj_ids')}" %>";
 </script>
 <% wkcrm_helper = Object.new.extend(WkcrmHelper) %>
 <% 
-	parentArr = options_for_wktime_account(false, 'A')
+	parentArr = options_for_wktime_account(false, 'A', controller.additionalAccountType)
 	if !parentObject.blank?
 		ptype = parentObject.parent_type == "WkCrmContact" ? 'C' : 'A'
-		parentArr = relatedValues(parentObject.parent_type, parentObject.parent_id, ptype, false, controller.additionalContactType)	
-    elsif !parentType.blank?
+		parentArr = relatedValues(parentObject.parent_type, parentObject.parent_id, ptype, false, controller.additionalContactType, controller.additionalAccountType)	
+  elsif !parentType.blank?
 		ptype = parentType == "WkCrmContact" ? 'C' : 'A'
-		parentArr = relatedValues(parentType, :parentId, ptype, false, controller.additionalContactType)		
+		parentArr = relatedValues(parentType, nil, ptype, false, controller.additionalContactType, controller.additionalAccountType)
 	end
 	#parentArr.unshift(["",''])
 	relHash = wkcrm_helper.relatedHash
 	relHash.delete("WkOpportunity")
-	relHash.delete("WkLead")
+	relHash.delete("WkLead") if !controller.addLeadDD 
 	#unless index
 	#	relHash.delete("")
 	#end
@@ -31,7 +31,7 @@
 	end
 %>
 <tr>
-	<th align="left"><%= l(:label_type) %></th>
+	<th align="left"><%= l(:field_type) %></th>
 	<td style="padding-left:<%=stylePadding%>px;"><%=h select_tag('related_to', options_for_select(relHash.invert, :selected => parentObject.blank? ? (parentType.blank? ? "" : parentType) : parentObject.parent_type ), :onchange => "actRelatedDd(#{User.current.id}, #{needParentProject}, #{needblankType}, 'A', 'C', false); ") %></td>
 <% if padding.blank? %>
 </tr>

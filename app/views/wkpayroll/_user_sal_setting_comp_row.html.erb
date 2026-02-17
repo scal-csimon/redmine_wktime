@@ -1,13 +1,34 @@
+
 <% salCompTypeValues.each do |compEntry| %>
-	<% sal_component = salaryComponents.reject{|name, id| name.include?(compEntry[0].sc_name.to_s) } %>
+	<% sal_component = filterSalComps(compEntry[0]) %>
+	<%= hidden_field_tag('h_dependent_id' + compEntry[0].sc_id.to_s, compEntry[2]) %>
+	<%= hidden_field_tag('h_factor' + compEntry[0].sc_id.to_s, compEntry[3]) %>
 	<tr>
-		<td><%=h check_box_tag('is_override' + compEntry[0].sc_id.to_s, value = "1", checked = compEntry[1], options = {:onchange => "overrideSettings(this);", :disabled => (validateERPPermission('A_TE_PRVLG') ? false : true)}) %>
-		<td><%=h compEntry[0].sc_name %>
+		<td style="text-align: center"><%=h check_box_tag('is_override' + compEntry[0].sc_id.to_s, value = "1", checked = compEntry[1], options = {:onchange => "overrideSettings(this);", :disabled => (validateERPPermission('A_PAYRL') ? false : true)}) %>
+		<td>
+			<%=h compEntry[0].sc_name %>
+			<% showCalTax = validateERPPermission('A_PAYRL') && getTaxSettings('tax_rule').present? && (compEntry[0].sc_id == getTaxSettings('income_tax').to_i) %>
+			<% if showCalTax %>
+				<%= link_to l(:label_apply_tax), '#',
+					onclick: "javascript:calculateTax("+ compEntry[0].user_id.to_s + "," +
+							compEntry[0].sc_id.to_s + ");", style: "padding-left: 10px;", id: "applyTax" %>
+			<% end %>
 		</td>
-		<td><%=h select_tag('dependent_id' + compEntry[0].sc_id.to_s , 
-		options_for_select(sal_component, :selected =>  compEntry[2], :required => true), options = {:disabled => (validateERPPermission('A_TE_PRVLG') ? !compEntry[1] : true)} ) %></td>
-		<td><%=h text_field_tag('factor' + compEntry[0].sc_id.to_s, compEntry[3], :size => 10, :maxlength => 7, :disabled => (validateERPPermission('A_TE_PRVLG') ? !compEntry[1] : true), :required => true) %>
+		<td>
+			<% if compEntry[0].sc_component_type == 'b' %>
+				<%= select_tag('salary_type' + compEntry[0].sc_id.to_s , options_for_select(getSalaryType.invert, selected: compEntry[4]),
+				disabled: !(validateERPPermission('A_PAYRL') && compEntry[1]), style: "min-width: 100px") %>
+			<% else %>
+				<%= select_tag('dependent_id' + compEntry[0].sc_id.to_s , options_for_select(sal_component, :selected =>  compEntry[2], :required => true),
+				options = {disabled: !(validateERPPermission('A_PAYRL') && compEntry[1]) || showCalTax,
+				class: showCalTax ? "" : "userSalComps", style: "min-width: 100px" } ) %>
+			<% end %>
 		</td>
-		<td align='right'><%=h "%.2f" % actualSalVal[compEntry[0].sc_id] %></td>
+		<td>
+			<%=h text_field_tag('factor' + compEntry[0].sc_id.to_s, compEntry[3], :size => 10, :maxlength => 7,
+				:disabled => !(validateERPPermission('A_PAYRL') && compEntry[1]), :required => true,
+				class: showCalTax ? "" : "userSalComps" ) %>
+		</td>
+		<td style="text-align: right"><%=h "%.2f" % actualSalVal[compEntry[0].sc_id] %></td>
 	</tr>
 <% end %>

@@ -1,0 +1,29 @@
+api.array :wk_survey, api_meta(:total_count => @entry_count, :offset => @offset, :limit => @limit, unseen_count: @unseen_count) do
+  @surveys.each do |entry|
+  surveyLink = get_survey_with_userGroup(entry.id, false)
+    api.entry do
+      api.id entry.id
+      api.name entry.name
+      api.status_label getSurveyStatus.invert[entry.status]
+      api.status entry.status
+      api.group_id entry.group_id
+      api.survey_for_type entry.survey_for_type
+      api.survey_for_id entry.survey_for_id
+      api.recur entry.recur
+      api.recur_every entry.recur_every
+      api.is_review entry.is_review
+      api.hide_response entry.hide_response
+      api.show_result (entry.status == "O" && validateERPPermission("E_SUR")) || entry.status == "C" || getResponseGroup(entry.id).present?
+      api.surveyLink surveyLink.present?
+      api.save_allowed entry.save_allowed
+    end
+  end
+end
+
+api.headers do
+  api.surveyFor_items getSurveyFor
+  api.status_items getSurveyStatus.drop(1)
+  api.userGroup_items getUserGroup
+  api.questionType_items getQuestionType
+  api.responseStatus_items getResponseStatus
+end

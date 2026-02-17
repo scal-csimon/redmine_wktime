@@ -15,6 +15,7 @@ var hStartIndex = 2;
 var issueField = 'Issue';
 var submissionack="";
 var minHourAlertMsg="";
+var maxHourAlertMsg="";
 var decSeparator = ".";
 var lblPleaseSelect = "";
 var lblWarnUnsavedTE = "";
@@ -28,9 +29,13 @@ var nscount = 0;
 var clkdialogid = 0;
 var minHourperWeekAlertMsg="";
 var maxHourperWeekAlertMsg="";
+var attachmentDiv = "";
+var attachmentField = "";
+var reqRejectAlert = "";
+
 $(document).ready(function() {
 	var e_comments = $( "#_edit_comments_" );
-	var e_notes = $( "#_edit_notes_" );	
+	var e_notes = $( "#_edit_notes_" );
 	for(i = 0 ; i< 8 ; i++)
 	{
 		$( "#clockInOut-dlg"+i ).dialog({
@@ -40,7 +45,7 @@ $(document).ready(function() {
 		height: '300',
         overflow: 'auto', /* Or scroll, depending on your needs*/
 		buttons: {
-			"Ok": function() {							
+			"Ok": function() {
 				var attnEntriesId, attnStartTime, attnEndTime, attnhours;
 				var attnDayEntriesCnt = new Array();
 				var paramval = "";
@@ -49,15 +54,15 @@ $(document).ready(function() {
 				attnDayEntriesCnt = document.getElementById('attnDayEntriesCnt_'+clkdialogid) != null ? document.getElementById('attnDayEntriesCnt_'+clkdialogid).value : -1;
 				for(j = 0; j < attnDayEntriesCnt ; j++)
 				{
-					
+
 					attnEntriesId = document.getElementById('attnEntriesId'+ clkdialogid +'_'+ j);
 					attnStartTime = document.getElementById('attnstarttime'+ clkdialogid +'_'+ j);
 					attnEndTime = document.getElementById('attnendtime'+ clkdialogid +'_'+ j);
 					attnhours = document.getElementById('hoursdiff'+ clkdialogid +'_'+ j);
-					if (attnStartTime.defaultValue !=  attnStartTime.value  || attnEndTime.defaultValue !=  attnEndTime.value ) {						
+					if (attnStartTime.defaultValue !=  attnStartTime.value  || attnEndTime.defaultValue !=  attnEndTime.value ) {
 						paramval += ( !attnEntriesId.value ? (( "|" + clkdialogid ) + "|") : (attnEntriesId.value + "|") ) +  attnStartTime.value + "|" + attnEndTime.value + "|" + attnhours.value + ",";
 					}
-					
+
 				}
 				updateAtt(paramval,true, "", -1);
 				$( this ).dialog( "close" );
@@ -67,9 +72,8 @@ $(document).ready(function() {
 				$( this ).dialog( "close" );
 			}
 		}
-	});	
+	});
 	}
-	 
 
 	$( "#comment-dlg" ).dialog({
 		autoOpen: false,
@@ -81,48 +85,57 @@ $(document).ready(function() {
 					var comments = $('input[name="comments'+comment_row+'[]"]');
 					var custFldToolTip;
 					if(!commentInRow){
-						comments[comment_col-1].value = e_comments.val();	
-					}					
-					updateCustomField();					
-					custFldToolTip = getCustFldToolTip();
-					if(	!commentInRow && e_comments.val() != "")
-					{
-						edits[comment_col-1].title = e_comments.val() + "," +custFldToolTip;
-						
+						comments[comment_col-1].value = e_comments.val();
 					}
-					else
+					updateCustomField();
+					custFldToolTip = getCustFldToolTip();
+					if(	edits.length > 0 && !commentInRow && e_comments.val() != "")
+					{
+						edits[comment_col-1].title = (e_comments.val() || '') + "," +(custFldToolTip || '');
+
+					}
+					else if(	edits.length > 0)
 					{
 						edits[comment_col-1].title = custFldToolTip;
-						
+
 					}
-					//show detail popup dialog ok button to change image 					
-					var x = document.getElementsByName("custfield_img"+comment_row+"[]");
-					if( (e_comments.val() != "" || custFldToolTip)  && (!commentInRow  || custFldToolTip )   ) 
-					{						
-						$(x[comment_col-1]).attr({src: "../plugin_assets/redmine_wktime/images/withcommant.png"});
-						
+					//show detail popup dialog ok button to change image
+					var x = document.getElementsByName("custfield_img" + comment_row + "[]");
+					const x_name = 'custfield_img' + comment_row + '[]', x_id = 'custfield_img' + comment_row + '_';
+
+					if( ((e_comments.val() != "" || custFldToolTip)  && (!commentInRow  || custFldToolTip )) || $("#attachment_" + comment_row + "_" + comment_col + " .attachments_fields").children().length > 0)
+					{
+						withCommantImg = $('<div>').append($(withCommantImg).attr({ id: x_id, name: x_name })).html();
+						$(x[comment_col-1]).replaceWith(withCommantImg);
 					}
 					else
-					{					
-						$(x[comment_col-1]).attr({src: "../plugin_assets/redmine_wktime/images/withoutcommant.png"});
-					}					
-					$( this ).dialog( "close" );				
+					{
+						withoutcommantImg = $('<div>').append($(withoutcommantImg).attr({ id: x_id, name: x_name })).html();
+						$(x[comment_col-1]).replaceWith(withoutcommantImg);
+					}
+					$(attachmentField).appendTo(attachmentDiv);
+					$( this ).dialog( "close" );
 					//unregister this event since this is showing a 'don't leave' message
 					//loosk like this is not supported in Opera
 					//window.onbeforeunload = null;
 			},
 			Cancel: function() {
+				$(attachmentField).appendTo(attachmentDiv);
 				$( this ).dialog( "close" );
 			}
 		}
-	});	
-	
+	});
+
 	$( "#notes-dlg" ).dialog({
 		autoOpen: false,
 		resizable: false,
 		modal: true,
 		buttons: {
 			"Ok": function() {
+				if (e_notes.val().trim() === "") {
+					alert(reqRejectAlert);
+					return;
+				}
 				$( this ).dialog( "close" );
 				$( "#hidden_wk_reject" ).val('r');
 				$( "#wktime_notes" ).val(e_notes.val());
@@ -132,8 +145,8 @@ $(document).ready(function() {
 				$( this ).dialog( "close" );
 			}
 		}
-	});	
-	
+	});
+
 	if(showWorkHeader) {
 		//when initially load the page hidden the clock in Clock out button
 		var clkStart, clkEnd, colNum, attnId;
@@ -159,20 +172,32 @@ $(document).ready(function() {
 			{
 				document.getElementById('end').style="display:none; !important";
 			}
-		}	
-		
+		}
+
 		// when initially load the page update total and remaininghours
 		for(i = 1; i <= 7; i++)
-		{		
+		{
 			updateTotalHr(i, "");
 			updateRemainingHr(i, "");
 		}
 	}
-	
+	const tableLen = $('#issueTable tr').length;
+	for(let i=1; i <= (tableLen -2); i++) checkLogPermissions(i);
+
+	$(document).on('focusin', '.load', function(){
+    $(this).data('val', $(this).val());
+	}).on('change','.load', function(){
+		loadEdit(this, $(this).data('val'));
+	});
+
+	// for searchable dopdown
+	if($("#issueTable .issueDD").length > 0){
+		$("#issueTable .issueDD").select2();
+	}
 });
 
-$(window).load(function(){
-	warnLeavingUnsavedTE(lblWarnUnsavedTE); 
+$(window).on('load', function () {
+	warnLeavingUnsavedTE(lblWarnUnsavedTE);
 });
 
 var warnLeavingUnsavedTEMsg;
@@ -208,12 +233,10 @@ function isChanged(elType) {
 	return warn;
 }
 
-function showComment(row, col) {
+function showComment(row, col, title) {
 	var images = $( 'img[name="custfield_img'+row+'[]"]' );
-	var width = 300;
-	var height = 350;
-	var posX = 0;
-	var posY = 0;
+	var width = 600;
+	var height = 450;
 	var i = row - 1;
 	var currImage = images[col-1];
 	var projDropdowns = $('select[name="time_entry[][project_id]"]');
@@ -232,23 +255,34 @@ function showComment(row, col) {
 		//issue will be a text box
 		$( "#_edit_comm_iss_" ).html(issueIds[i].value);
 	}else{
-		$( "#_edit_comm_proj_" ).html(projDropdowns[i].selectedIndex >= 0 ? 
-			projDropdowns[i].options[projDropdowns[i].selectedIndex].text : '');			
+		if(projDropdowns[i]){
+			$( "#_edit_comm_proj_" ).html(projDropdowns[i].selectedIndex >= 0 ?
+				projDropdowns[i].options[projDropdowns[i].selectedIndex].text : '');
+		}
 		$( "#_edit_comm_iss_" ).html(issDropdowns[i].selectedIndex >= 0 ?
 			(issDropdowns[i].options[issDropdowns[i].selectedIndex].value == -1 ? '' : issDropdowns[i].options[issDropdowns[i].selectedIndex].text) : '');
 	}
+	if(actDropdowns[i]){
 	$( "#_edit_comm_act_" ).html(actDropdowns[i].selectedIndex >= 0 ?
 		(actDropdowns[i].options[actDropdowns[i].selectedIndex].value == -1 ? '' : actDropdowns[i].options[actDropdowns[i].selectedIndex].text) : '');
-	
-	showCustomField();		
-	
-	posX = $(currImage).offset().left - $(document).scrollLeft() - width + $(currImage).outerWidth();
-	posY = $(currImage).offset().top - $(document).scrollTop() + $(currImage).outerHeight();
-	$("#comment-dlg").dialog({width:width, height:height ,position:[posX, posY]});
-	$( "#comment-dlg" ).dialog( "open" );
+	}
+
+	showCustomField();
+
+	//For Attachments
+	if(!$(attachmentField).prev().is('span')){
+		$(attachmentField).appendTo(attachmentDiv);
+	}
+	attachmentDiv = '#attachdiv_'+row+'_'+col;
+	attachmentField = '#attachment_'+row+'_'+col;
+	const destination = $('#_edit_comments_').closest('fieldset');
+	$(attachmentField).appendTo(destination);
+	$(attachmentField).show();
+	const position = $(currImage).position();
+	$("#comment-dlg").dialog({ title: title, width: width, height: height }).dialog( "open" );;
 }
 
-function showNotes() {
+function showNotes(title) {
 	var rejectBtn = $( 'input[name="wktime_reject"]' );
 	var width = 300;
 	var height = 200;
@@ -257,7 +291,7 @@ function showNotes() {
 	posX = $(rejectBtn).offset().left - $(document).scrollLeft() - width + $(rejectBtn).outerWidth();
 	posY = $(rejectBtn).offset().top - $(document).scrollTop() + $(rejectBtn).outerHeight();
 	$("#notes-dlg").dialog({width:width, height:height ,position:[posX, posY]});
-	$( "#notes-dlg" ).dialog( "open" );
+	$( "#notes-dlg" ).dialog('option', 'title', title).dialog( "open" );
 	//return false so the form is not posted
 	return false;
 }
@@ -268,8 +302,8 @@ function showCustomField() {
 		var i, cust_field, ck_cust_field, custom_fields, cust_vals;
 		for(i=0; i < cust_fids.length; i++){
 			cust_field = $( "#" + cust_fids[i]);
-			custom_fields = $('input[name="'+cust_fids[i]+comment_row+'[]"]');
-			
+			custom_fields = $('input[name="'+cust_fids[i]+'_'+comment_row+'[]"]');
+
 			if(cust_field.is("select")){
 				//if the value is not set, it could be an array
 				cust_vals = custom_fields[comment_col-1].value.split(',');
@@ -292,11 +326,11 @@ function updateCustomField() {
 	if(cf_ids != ''){
 		var cust_fids = cf_ids.split(',');
 		var i, j,cust_field, ck_cust_field, custom_fields;
-		
+
 		for(i=0; i < cust_fids.length; i++)
-		{		
+		{
 			cust_field = $( "#" + cust_fids[i]);
-			custom_fields = $('input[name="'+cust_fids[i]+comment_row+'[]"]');
+			custom_fields = $('input[name="'+cust_fids[i]+'_'+comment_row+'[]"]');
 			if(cust_field.attr('type') == "hidden"){
 				//the checkbox also has a hidden field
 				ck_cust_field = $('input[id="'+cust_fids[i]+'"][type="checkbox"]');
@@ -310,9 +344,9 @@ function updateCustomField() {
 			}else{
 				custom_fields[comment_col-1].value = cust_field.val();
 			}
-		}		
+		}
 	}
-	
+
 }
 
 //forming custom fields for tooltip
@@ -320,10 +354,10 @@ function getCustFldToolTip()
 {
 	var cusfield = "",str;
 	if(cf_ids != '')
-	{	
-		var cust_fids = cf_ids.split(',');		
+	{
+		var cust_fids = cf_ids.split(',');
 		for(i=0; i < cust_fids.length; i++)
-		{		
+		{
 			cust_field = $( "#" + cust_fids[i]);
 			if (cusfield == "")
 			{
@@ -344,19 +378,19 @@ function getCustFldToolTip()
 }
 
 function projectChanged(projDropdown, row){
-	
+
 	var issuId = document.getElementById('enter_issue_id');
-	
+
 	if((issuId==null)||(issuId != null && !issuId.checked))
-	{	
+	{
 		var id;
-		if(row != 0){	
+		if(row != 0){
 			id = projDropdown.options[projDropdown.selectedIndex].value;
 		}
 		else{
 			//click addrow, changed issues for particular project tracker
-			row = projDropdown.length;	
-			var id =projDropdown[row-1].value;			
+			row = projDropdown.length;
+			var id =projDropdown[row-1].value;
 		}
 		var fmt = 'text';
 		var issDropdown = document.getElementsByName("time_entry[][issue_id]");
@@ -365,11 +399,11 @@ function projectChanged(projDropdown, row){
 		var issUrl = document.getElementById("getissues_url").value;
 		var actUrl = document.getElementById("getactivities_url").value;
 		var clientUrl = document.getElementById("getclients_url").value;
-	 
+
 		var uid = document.getElementById("user_id").value;
-		var $this = $(this);    
+		var $this = $(this);
 		issue_assign_user=issueAssignUser();
-		var	trackerListArr = getSelectedTracker(document.getElementById('select_issues_tracker'));	
+		var	trackerListArr = $("#select_issues_tracker").val() == 0 ? '' : $("#select_issues_tracker").val();
 		var startday=document.getElementById("startday").value;
 		$.ajax({
 			url: issUrl,
@@ -378,14 +412,15 @@ function projectChanged(projDropdown, row){
 			success: function(data){
 				var items = data.split('\n');
 				var needBlankOption = items.length-1 > 1 || allowBlankIssue ;
-				updateDropdown(data, row, issDropdown, true, needBlankOption, true, null); 
+				updateDropdown(data, row, issDropdown, true, needBlankOption, true, null);
+				$("#issueTable .issueDD").select2();
 			},
 			beforeSend: function(){ $this.addClass('ajax-loading'); },
 			complete: function(){ $this.removeClass('ajax-loading'); }
 		});
-		
+
 		if (actDropdown.length > 0 && actDropdown[0].type == 'select-one'){   //("time_entry[][activity_id]")){
-			$.ajax({ 
+			$.ajax({
 				url: actUrl,
 				type: 'get',
 				data: {project_id: id, user_id: uid, format:fmt},
@@ -398,24 +433,10 @@ function projectChanged(projDropdown, row){
 				beforeSend: function(){ $this.addClass('ajax-loading'); },
 				complete: function(){ $this.removeClass('ajax-loading'); }
 			});
-		}		
+		}
 		updateClientDropdown(clientUrl, id, null, uid, fmt, row, clientDropdown);
-/* 		if (clientDropdown.length > 0){ // To check for dropdown if element there it will give 1
-			$.ajax({
-				url: clientUrl,
-				type: 'get',
-				data: {project_id: id, user_id: uid, format:fmt},
-				success: function(data){
-					//var actId = getDefaultActId(data);
-					//var items = data.split('\n');
-					//var needBlankOption = !(items.length-1 == 1 || actId != null);
-					updateDropdown(data, row, clientDropdown, false, true, true, null);
-				},
-				beforeSend: function(){ $this.addClass('ajax-loading'); },
-				complete: function(){ $this.removeClass('ajax-loading'); }
-			});
-		} */
 	}
+	checkLogPermissions(row);
 }
 
 function updateClientDropdown(clientUrl, projectId, issueId, uid, fmt, row, clientDropdown){
@@ -434,80 +455,23 @@ function updateClientDropdown(clientUrl, projectId, issueId, uid, fmt, row, clie
 				beforeSend: function(){ $this.addClass('ajax-loading'); },
 				complete: function(){ $this.removeClass('ajax-loading'); }
 			});
-	}	
-}
-
-function trackerFilterChanged(trackerList){
-	if(trackerList!=null){	
-		var projDropdown = document.getElementsByName('time_entry[][project_id]');		
-		var fmt = 'text';		
-		var issUrl = document.getElementById("getissues_url").value;	
-		var uid = document.getElementById("user_id").value;
-		var $this = $(this);
-		issue_assign_user=issueAssignUser();
-		var startday=document.getElementById("startday").value;
-		//get selected tracter id from listbox and form array			
-		var trackerListArr = getSelectedTracker(trackerList);
-		var projIds = new Array();	
-		var i,b = {},projectids = [];
-		//if selectd project list
-		for(i=0; i < projDropdown.length;i++)
-		{	
-			projIds[i] = projDropdown[i].value;			
-		}		
-		//remove duplicate value from array
-		for (i = 0; i < projIds.length; i++) {
-			b[projIds[i]] = projIds[i];
-		}		
-		
-		for (var key in b) {
-			projectids.push(key);
-		}
-	
-		$.ajax({
-			url: issUrl,
-			type: 'get',
-			data: {project_ids:projectids,user_id: uid, tracker_id: trackerListArr, format:fmt,startday:startday, issue_assign_user: issue_assign_user},			
-			success: function(data){updateIssDropdowns(data,projDropdown,projectids); },
-			beforeSend: function(){ $this.addClass('ajax-loading'); },
-			complete: function(){ $this.removeClass('ajax-loading'); }
-		});
-	}	
-}
-
-function getSelectedTracker(trackerList){
-	var trackerListArr;
-	if(trackerList != null)
-	{
-		trackerListArr = new Array();
-		var j=0;
-		for(var i=0; i < trackerList.options.length; i++)
-		{ 	
-			if(trackerList.options[i].selected == true && trackerList.options[i].value != "") 
-			{ 
-				trackerListArr[j] = trackerList.options[i].value;
-				j++;				
-			}
-		}
 	}
-	return trackerListArr;
 }
-
 
 function issueChanged(issueText, row){
 	var id = myTrim(issueText.value);
 	issueIdChanged(id, row);
 }
-	
+
 function issueIdChanged(id, row){
-	var actDropdown = document.getElementsByName("time_entry[][activity_id]");	
+	var actDropdown = document.getElementsByName("time_entry[][activity_id]");
 	var clientDropdown = document.getElementsByName("time_entry[][spent_for_attributes][spent_for_key]");
-	var uid = document.getElementById("user_id").value;	       
+	var uid = document.getElementById("user_id").value;
 	var fmt = 'text';
-	if(id != ''){  
+	if(id != ''){
 		if(actDropdown.length > 0){               //&& isDropdown("time_entry[][activity_id]"))
 			var actUrl = document.getElementById("getactivities_url").value;
-			
+
 			var $this = $(this);
 			$.ajax({
 				url: actUrl,
@@ -525,43 +489,43 @@ function issueIdChanged(id, row){
 			var clientUrl = document.getElementById("getclients_url").value;
 			updateClientDropdown(clientUrl, null, id, uid, fmt, row, clientDropdown);
 		}
-	}	
+	}
 }
 
 function updateIssDropdowns(itemStr, projDropdowns,projIds)
-{	
+{
 	var items = itemStr.split('\n');
 	var i, index, itemStr2='', val, text;
 	var prev_project_id=0, project_id=0;
-	var j, id;	
-	var issDropdowns = document.getElementsByName("time_entry[][issue_id]");	
-	
-	for(i=0; i < items.length-1; i++){	
-		index = items[i].indexOf('|');		
+	var j, id;
+	var issDropdowns = document.getElementsByName("time_entry[][issue_id]");
+
+	for(i=0; i < items.length-1; i++){
+		index = items[i].indexOf('|');
 		if(index != -1){
 			project_id = items[i].substring(0, index);
-			
+
 			//if project_id exists in projIds array, remove project_id from array
-			for(j=0; j<= projIds.length; j++){			
-				if(project_id == projIds[j]){				
+			for(j=0; j<= projIds.length; j++){
+				if(project_id == projIds[j]){
 					projIds.splice(j,1);
-				}				
+				}
 			}
-			if(prev_project_id != project_id && itemStr2 != ''){		
+			if(prev_project_id != project_id && itemStr2 != ''){
 				updateIssueDD(itemStr2, prev_project_id, projDropdowns, issDropdowns);
 				itemStr2='';
 			}
-			itemStr2 += items[i] + '\n';		
+			itemStr2 += items[i] + '\n';
 			prev_project_id = project_id;
 		}
 	}
 	//the last project needs to be updated outside the loop
-	updateIssueDD(itemStr2, prev_project_id, projDropdowns, issDropdowns);	
-	
+	updateIssueDD(itemStr2, prev_project_id, projDropdowns, issDropdowns);
+
 	//tracker is empty for project ,set option value empty
 	if(projIds.length >0)
 	{
-		for(k=0; k < projIds.length; k++){		
+		for(k=0; k < projIds.length; k++){
 			updateIssueDD("", projIds[k], projDropdowns, issDropdowns);
 		}
 	}
@@ -572,14 +536,14 @@ function updateIssueDD(itemStr, project_id, projDropdowns, issDropdowns)
 	var proj_id, issue_id=null;
 	var items = itemStr.split('\n');
 	var needBlankOption = items.length-1 > 1 || allowBlankIssue ;
-	if(projDropdowns){	
-		for (j=0; j < projDropdowns.length; j++){		
+	if(projDropdowns){
+		for (j=0; j < projDropdowns.length; j++){
 			proj_id = projDropdowns[j].options[projDropdowns[j].selectedIndex].value;
-			if(proj_id != '' && project_id == proj_id){			
+			if(proj_id != '' && project_id == proj_id){
 				if(issDropdowns[j]){
-					if(issDropdowns[j].value != ""){						
+					if(issDropdowns[j].value != ""){
 						issue_id = issDropdowns[j].options[issDropdowns[j].selectedIndex].value;
-					}	
+					}
 					else {
 						issue_id = null;
 					}
@@ -590,7 +554,7 @@ function updateIssueDD(itemStr, project_id, projDropdowns, issDropdowns)
 	}
 }
 function updateActDropdown(data, row, actDropdown){
-	
+
 	var enterIsueIdChk = document.getElementById("enter_issue_id");
 	var items = data.split('\n');
 	if(enterIsueIdChk && enterIsueIdChk.checked){
@@ -646,21 +610,21 @@ function updateDropdown(itemStr, row, dropdown, showId, needBlankOption, skipFir
 			//{
 				text = text.split('|');
 			//}
-			dropdown[row-1].options[needBlankOption ? i+1 : i] = new Option( 
-				showId ? text[0] + ' #' + val + ': ' + text[1] : text[1], val, false, val == selectedVal);			
+			dropdown[row-1].options[needBlankOption ? i+1 : i] = new Option(
+				showId ? text[0] + ' #' + val + ': ' + text[1] : text[1], val, false, val == selectedVal);
 			if(val == selectedVal){
 				selectedValSet = true;
 			}
 		}
 	}
-	
+
 	var addExistingOption = true;
 	if(showId) { //for issue dropdown
 		var hoursFld = document.getElementsByName("hours" + row + "[]");
 		addExistingOption = false;
 		for(var j = 0; j < hoursFld.length; j++) {
 			if(hoursFld[j].value) {
-				addExistingOption = true;			
+				addExistingOption = true;
 				break;
 			}
 		}
@@ -678,41 +642,31 @@ function performAction(url)
 	document.wktime_edit.submit();
 }
 
-/* allows user to enter issue as id and issue assigned to me */
-function enterIssueIdorAssignUser(){
-	var uid = document.getElementById("user_id").value;
-	var startday = document.getElementById("startday").value;
-	var enterIsueIdChk = document.getElementById("enter_issue_id");
-	var IsueassignUserChk = document.getElementById("issue_assign_user");
-	var trackerList = document.getElementById('select_issues_tracker');	
-	var issueID="";
-	var issueAssignUser="";
-	if(enterIsueIdChk && enterIsueIdChk.checked){
-		issueID = "&enter_issue_id=" + enterIsueIdChk.value;
+	// To load other users and Start date Time/Expense detail page
+function loadEdit(ele, preVal){
+	let url = new URL(window.location.href);
+	url.searchParams.set('user_id', $('#user_id').val());
+	url.searchParams.set('startday', $('#startday').val());
+    $('textarea').removeData('changed');
+    $('input').removeData('changed');
+    $('select').removeData('changed');
+	if(confirm(leavingMsg)){
+		location.href = url;
 	}
-	if(IsueassignUserChk && IsueassignUserChk.checked){		
-		issueAssignUser = "&issue_assign_user=" + IsueassignUserChk.value;
+	else{
+		$(ele).val(preVal);
 	}
-	if (trackerList && IsueassignUserChk){
-		var trackerListArr = getSelectedTracker(trackerList);
-		if(trackerListArr){
-			issueAssignUser += "&tracker_ids=" +trackerListArr;
-		}
-	}
-		location.href = editUrl +issueID + issueAssignUser;
-	
-
 }
 
 function addRow(){
-	var issueTable = document.getElementById("issueTable");	
+	var issueTable = document.getElementById("issueTable");
 	var saveButton = document.getElementById("wktime_save");
 	var submitButton = document.getElementById("wktime_submit");
 	var	issueTemplate = document.getElementById("issueTemplate");
-	var rowCount = issueTable.rows.length;	
+	var rowCount = issueTable.rows.length;
 	//there is a header row and a total row present, so the empty count is 2
 	var row = issueTable.insertRow(rowCount - footerRows);
-	
+
 	var cellCount = issueTemplate.rows[0].cells.length;
 	var i, cell;
 	for(i=0; i < cellCount; i++){
@@ -727,18 +681,21 @@ function addRow(){
 	{
 		submitButton.disabled = false;
 	}
+	issuetr = $('#issueTable').children('tbody').first().children('tr').get((rowCount -1 )-(headerRows + footerRows - 1))
+	issuetd = $(issuetr).children('td').get(1);
+	$(issuetd).children('select').first().select2();
 }
 
 function deleteRow(row, deleteMsg){
-	
+
 	//IE7 doesn't pull up the new elements by getElementsByName
 	//var ids = document.getElementsByName("ids" + row + "[]");
-	//var hours = document.getElementsByName("hours" + row + "[]");		
-	
+	//var hours = document.getElementsByName("hours" + row + "[]");
+
 	var issueTable = document.getElementById("issueTable");
 	//since there is already a header row
 	var hours = myGetElementsByName(issueTable.rows[row+headerRows-1], "input","hours" + row + "[]");
-	var ids = myGetElementsByName(issueTable.rows[row+headerRows-1], "input","ids" + row + "[]");			
+	var ids = myGetElementsByName(issueTable.rows[row+headerRows-1], "input","ids" + row + "[]");
 	var rowTotal = 0.0;
 	var uid = document.getElementById("user_id");
 	var vals = new Array();
@@ -746,14 +703,14 @@ function deleteRow(row, deleteMsg){
 	var i = 0, j = 0;
 	var fmt = 'text', val;
 	var url = document.getElementById("deleterow_url").value;
-	
+
 	for(i=0; i< ids.length; i++){
 		if (ids[i].value != ''){
 			vals[j] = ids[i].value;
 			j++;
 		}
 	}
-	
+
 	j = 0;
 	for(i=0; i< hours.length; i++){
 		val = myTrim(hours[i].value);
@@ -774,7 +731,7 @@ function deleteRow(row, deleteMsg){
 			beforeSend: function(){ $this.addClass('ajax-loading'); },
 			complete: function(){ $this.removeClass('ajax-loading'); }
 		});
-	
+
 	}
 	else
 	{
@@ -789,17 +746,17 @@ function postDeleteRow(result, row, days, deleteMsg){
 	var submitButton = document.getElementById("wktime_submit");
 	var rowCount = issueTable.rows.length;
 	var i, dayTotal = 0.0;
-	
+
 	//there is a header and a total row always present, so the empty count is 2
 	if(result == "OK"){
 		//replaee the rows following the deleted row
 		for(i=row+headerRows; i < rowCount-footerRows; i++){
 			//replace inner html is not working properly for delete so modify
 			// the existing DOM objects
-			
+
 			renameElemProperties(issueTable.rows[i], i-(headerRows-1), i-headerRows);
 		}
-		
+
 		issueTable.deleteRow(row+headerRows-1);
 		if(rowCount - (headerRows + footerRows - 1) <= 2){
 			saveButton.disabled = true;
@@ -808,7 +765,7 @@ function postDeleteRow(result, row, days, deleteMsg){
 				submitButton.disabled = true;
 			}
 		}
-		for(i=0; i < days.length; i++){	
+		for(i=0; i < days.length; i++){
 			dayTotal = calculateTotal(days[i]);
 			updateDayTotal(days[i], dayTotal);
 			if(showWorkHeader){
@@ -832,18 +789,19 @@ function renameElemProperties(row, index, newIndex){
 }
 
 function renameCellIDs(cell, index, newIndex){
-	
+
 	renameProperty(cell, 'input', 'hours', index, newIndex);
 	renameProperty(cell, 'input', 'ids', index, newIndex);
 	renameProperty(cell, 'input', 'disabled', index, newIndex);
 	renameProperty(cell, 'input', 'comments', index, newIndex);
 	renameProperty(cell, 'img', 'custfield_img', index, newIndex);
-	
+	renameProperty(cell, 'span', 'attachment_', index, newIndex);
+
 	if(cf_ids != ''){
 		var cust_fids = cf_ids.split(',');
 		var i, j, cust_field, custom_fields;
 		for(i=0; i < cust_fids.length; i++){
-				renameProperty(cell, 'input', cust_fids[i], index, newIndex);
+				renameProperty(cell, 'input', cust_fids[i]+'_', index, newIndex);
 		}
 	}
 
@@ -864,23 +822,25 @@ function renameProperty(cell, tag, prefix, str, newStr){
 			renameIDName(children[j], prefix+str, prefix+newStr);
 		}else if(tag == 'input'){
 			renameIDName(children[j], prefix+str, prefix+newStr);
-			if(children[j].id == 'time_entry__issue_id'){
+			if(children[j].id == 'time_entry[][issue_id]'){
 				renameOnChange(children[j], str, newStr);
 			}
-						
 		}else if(tag == 'a'){
 			renameHref(children[j], prefix+str, prefix+newStr);
 		}else if(tag == 'select'){
 			renameOnChange(children[j], prefix+str, prefix+newStr);
+			renameIDName(children[j], prefix+str, prefix+newStr);
+		} else if(tag == 'span' && children[j].className == "allAttach"){
+			renameAttachment(children[j], newStr);
 		}
 	}
 }
 
 function renameIDName(child, str, newStr){
-	var id = child.id;	
-	var rExp = new RegExp(str);	
+	var id = child.id;
+	var rExp = new RegExp(str);
 	if(id.match(rExp)){
-		
+
 		child.id = id.replace( rExp, newStr);
 		var name = child.name;
 		child.name = name.replace( rExp, newStr);
@@ -901,14 +861,14 @@ function renameOnChange(child, index, newIndex){
 	var onchng = child.onchange;
 	var func = null;
 	var enterIsueIdChk = document.getElementById("enter_issue_id");
-	if(child.id == 'time_entry__project_id'){
+	if(child.name == 'time_entry[][project_id]'){
 		func = function(){projectChanged(this, row);};
-	}else if(child.id == 'time_entry__issue_id'){
+	}else if(child.name == 'time_entry[][issue_id]'){
 		if(enterIsueIdChk && enterIsueIdChk.checked){
 			func = function(){issueAutocomplete(this, row);};
 		}
 	}
-		
+
 	if(func){
 		//bind the row variable in the function
 		//func.bind(this, row);
@@ -921,7 +881,7 @@ function renameOnChange(child, index, newIndex){
 		{
 			child.onchange = func;
 		}
-		
+
 	}
 }
 
@@ -961,13 +921,13 @@ function calculateTotal(day){
 	var rowCount = issueTable.rows.length;
 	var dayTotal = 0.0;
 	var hours, i, j, k, val, children;
-	
+
 	//since it has a header,start,end,totalhr and total row use <  rowCount-2 and i=4
 	for(i=headerRows; i < rowCount-footerRows; i++){
 		//There is a bug in IE7, the getElementsByName doesn't get the new elements
-		//hours = document.getElementsByName("hours" + i + "[]");			
+		//hours = document.getElementsByName("hours" + i + "[]");
 		hours = myGetElementsByName(issueTable.rows[i], "input","hours" + (i - (headerRows - 1)) + "[]");
-			
+
 		val = myTrim(hours[day-1].value);
 		//replace any . with . for internationalization
 		if (tab.value =="wkexpense")
@@ -977,10 +937,10 @@ function calculateTotal(day){
 			{
 				hours[day-1].value = "";
 			}
-			
+
 			if( val != '' && !isNaN(val)){
 				dayTotal += Number(val);
-			} 
+			}
 		}else{
 		dayTotal += validateHours(val,hours[day-1])
 		}
@@ -990,17 +950,17 @@ function calculateTotal(day){
 
 function validateHours(hoursValue,hoursDay){
 	var valid =false
-	hoursValue = myTrim(hoursValue);			
-	var indexStr='',indexNextStr='',contcatStr='';					
+	hoursValue = myTrim(hoursValue);
+	var indexStr='',indexNextStr='',contcatStr='';
 	var hours ='',mins='',timeValue='',concatvalue ='';
 	var total=0;
 	if (!isNaN(hoursValue))	{
-		hours = hoursValue;		
+		hours = hoursValue;
 	}else if (hoursValue.indexOf('.') > -1){
-		valid = checkStr(hoursValue,'.')				
+		valid = checkStr(hoursValue,'.')
 	}else if (hoursValue.indexOf(",") > -1){
 		valid = checkStr(hoursValue,",")
-		if(!valid){				
+		if(!valid){
 			hours = hoursValue.replace(",", ".");
 		}
 	}else if (hoursValue.indexOf(":") > -1){
@@ -1011,10 +971,10 @@ function validateHours(hoursValue,hoursDay){
 			mins = val[1];
 		}
 	}else{
-		for (i = 0; i < hoursValue.length-1; i++){ 
+		for (i = 0; i < hoursValue.length-1; i++){
 			indexStr = hoursValue[i];
-			indexNextStr = hoursValue[i+1]									
-			if (!myTrim(indexNextStr) && indexStr && !contcatStr){									
+			indexNextStr = hoursValue[i+1]
+			if (!myTrim(indexNextStr) && indexStr && !contcatStr){
 				if (isNaN(indexStr)){
 					valid = true
 					break;
@@ -1025,8 +985,8 @@ function validateHours(hoursValue,hoursDay){
 				if (!isNaN(indexStr)){
 					timeValue += indexStr;
 				}if (isNaN(indexNextStr)){
-					contcatStr += indexNextStr;							
-				}else if (indexNextStr){							
+					contcatStr += indexNextStr;
+				}else if (indexNextStr){
 					if (contcatStr =="h" || contcatStr =="hour" || contcatStr =="hours" ){
 						contcatStr ='';
 						hours = timeValue
@@ -1040,7 +1000,7 @@ function validateHours(hoursValue,hoursDay){
 					}
 					 concatvalue +=indexNextStr;
 				}
-			}					
+			}
 		}
 	}
 	if (contcatStr =="h" || contcatStr =="hour" || contcatStr =="hours" ){
@@ -1053,10 +1013,10 @@ function validateHours(hoursValue,hoursDay){
 		timeValue=''
 		concatvalue=''
 	}else if (contcatStr){
-		valid = true				
+		valid = true
 	}
 	if (!myTrim(mins)){
-		mins = concatvalue				
+		mins = concatvalue
 	}
 	if (hours && mins){
 		if(parseInt(mins) >60){
@@ -1066,42 +1026,42 @@ function validateHours(hoursValue,hoursDay){
 	if (valid){
 		hoursDay.value='';
 	}else{
-		 total = totalHours(hours,mins)				
+		 total = totalHours(hours,mins)
 	}
 	return total;
 }
 function checkStr(hoursValue,type){
-	var valid =true;			
+	var valid =true;
 	hoursValue = hoursValue.replace(type, ".");
 	if (!isNaN(hoursValue))	{
 		valid = false
 	}
 	return valid
 }
-function totalHours(hours,mins){		
+function totalHours(hours,mins){
 	var minhour =0,total=0;
 	if (!isNaN(hours) && myTrim(hours))
-	{			
+	{
 		total = parseFloat(hours)
 	}
 	if (!isNaN(mins) && myTrim(mins))
 	{
 		minhour = parseFloat(mins)/60;
 		total +=parseFloat(minhour)
-	}			
+	}
 	return total
 }
 
 //There is a bug in IE7, the getElementsByName doesn't get the new elements
 //Workaround for the getElementsByName bug found in IE7
 function myGetElementsByName(parent, tag, name){
-	
-	var children = parent.getElementsByTagName(tag);	
+
+	var children = parent.getElementsByTagName(tag);
 	var mChildren = new Array();
 	var j, k=0;
 	for(j=0; j < children.length; j++){
 		if(children[j].name == name){
-			
+
 			mChildren[k++] = children[j];
 		}
 	}
@@ -1116,7 +1076,7 @@ function myTrim(val){
 function updateDayTotal(day, dayTotal){
 	var day_total = document.getElementById('day_total_'+day);
 	var currDayTotal = Number(day_total.innerHTML);
-	day_total.innerHTML = dayTotal.toFixed(2);	
+	day_total.innerHTML = dayTotal.toFixed(2);
 	updateTotal(dayTotal - currDayTotal);
 }
 
@@ -1131,21 +1091,21 @@ function updateTotal(increment){
 
 function updateRemainingHr(day, element)
 {
-	
+
 	var issueTable = document.getElementById("issueTable");
 	var rowCount = issueTable.rows.length;
 	var totalRow = issueTable.rows[rowCount-2];
 	var rmTimeRow = issueTable.rows[rowCount-1];
 	var totTime,cell,rmTimeCell,dayTt,remainingTm = 0;
 	totTime = getTotalTime(day, element);
-	
-	var day_total = document.getElementById('day_total_'+day);	
-	dayTt = Number(day_total.innerHTML);	
+
+	var day_total = document.getElementById('day_total_'+day);
+	dayTt = Number(day_total.innerHTML);
 	rmTimeCell = rmTimeRow.cells[hStartIndex + day];
 	if(totTime >  0)
 	{
 		remainingTm = totTime - dayTt;
-	}		
+	}
 	rmTimeCell.innerHTML = remainingTm.toFixed(2);
 }
 
@@ -1160,11 +1120,11 @@ function getTotalTime(day, element)
 	}
 	totTime = timeFormat(minDiff);
 	totTime = calculatebreakTimeNew(totTime, day, element);
-	if(element[0] == "start_"+day) 
-	{		
+	if(element[0] == "start_"+day)
+	{
 		totTime = document.getElementById(element[2]).value;
 	}
-	
+
 	totTime = timeStringToFloat(totTime);
 	return totTime;
 }
@@ -1177,7 +1137,7 @@ function getMinDiff(day,element)
 	var start, end;
 	st_min = getMinutes(day, element ? element[0] : 'start_');
 	end_min = getMinutes(day, element ? element[1] : 'end_');
-	
+
 	if(st_min > end_min)
 	{
 		if(st_min <= 720)
@@ -1189,18 +1149,18 @@ function getMinDiff(day,element)
 			end_min += 1440;
 		}
 	}
-	minDiff = end_min - st_min;	
+	minDiff = end_min - st_min;
 	return minDiff;
 }
 
-//convert the hour to minutes 
+//convert the hour to minutes
 function getMinutes(day,str)
-{	
-	var fldVal,fldVal_min;	
+{
+	var fldVal,fldVal_min;
     var attnDayEntriesCnt1 =  document.getElementById('attnDayEntriesCnt_'+day) != null ? document.getElementById('attnDayEntriesCnt_'+day).value : -1;
     if(str == "start_" || str == "end_")
 	{
-		fldVal =   document.getElementById(str+(day)).value ;		
+		fldVal =   document.getElementById(str+(day)).value ;
 	}
 	else{
 		if(day != -1)
@@ -1210,46 +1170,46 @@ function getMinutes(day,str)
 		else{
 			fldVal = str;
 		}
-		
-	}		
-	fldVal = !fldVal ? '00:00' : fldVal;	
+
+	}
+	fldVal = !fldVal ? '00:00' : fldVal;
 	fldVal = fldVal.split(":");
-	fldVal_min = (fldVal[0] * 60) + parseInt(fldVal[1]);	
+	fldVal_min = (fldVal[0] * 60) + parseInt(fldVal[1]);
 	return fldVal_min;
 }
 
 //Calculates and fills the total hr
 function updateTotalHr(day, element)
-{		
-	var issueTable = document.getElementById("issueTable");	
-	var tot_Hr = 0,tot_min = 0,totTime="";	
+{
+	var issueTable = document.getElementById("issueTable");
+	var tot_Hr = 0,tot_min = 0,totTime="";
 	var minDiff = 0 ;
 	var attnDayEntriesCnt1 =  document.getElementById('attnDayEntriesCnt_'+day) != null ? document.getElementById('attnDayEntriesCnt_'+day).value : (document.getElementById('attnDayEntriesCnt') != null ? document.getElementById('attnDayEntriesCnt').value : -1);
 	if(!element)
 	 {
 		 for(j = 0 ; j < attnDayEntriesCnt1 ; j++ )
 		 {
-			var sval =  document.getElementById('attnstarttime'+day+'_' + j).value; 
+			var sval =  document.getElementById('attnstarttime'+day+'_' + j).value;
 			var  eval1 = document.getElementById('attnendtime'+day+'_' + j).value ;
 			 minDiff  +=  sval && eval1 ? getMinDiff(day, ['attnstarttime'+day+'_' + j,'attnendtime'+day+'_' + j, 'hoursdiff'+day+'_' + j]) : 0 ;
 		 }
-		 
+
 	 }
 	 else{
 		  minDiff = getMinDiff(day, element);
 	 }
-	 
+
 	totTime = timeFormat(minDiff);
 	totTime = calculatebreakTimeNew(totTime, day, element);
-	if(element[0] == "start_"+day) 
+	if(element[0] == "start_"+day)
 	{
-		var addtotal = document.getElementById(element[2]).value;			
+		var addtotal = document.getElementById(element[2]).value;
 		var isnightshift = document.getElementById('nightshift') != null ?  document.getElementById('nightshift').value : false;
 		if(!isnightshift && clktot == 1)
 		{
 			addtotal = addtotal ? addtotal : "00:00:00";
 			totTime = MinutesDifferent(addtotal, totTime+":00", 1 );
-		}			
+		}
 		document.getElementById(element[2]).value = totTime ;
 		clktot = 1;
 	}
@@ -1263,14 +1223,14 @@ function updateTotalHr(day, element)
 		}
 		totTime = timeFormat(minDiff);
 		totTime = calculatebreakTimeNew(totTime, day, element);
-	}	
+	}
 	if(document.getElementById("grandTotal_"+day) != null)
 	{
 		var thours = 0.0;
 		for(k = 0 ; k < attnDayEntriesCnt1 ; k++ )
 		{
-			var addhours =  document.getElementById('hoursdiff'+day+'_' + k).value; 
-			thours	= Number((thours + (addhours  ? parseFloat(addhours) : 0.0)).toFixed(2)) ;		
+			var addhours =  document.getElementById('hoursdiff'+day+'_' + k).value;
+			thours	= Number((thours + (addhours  ? parseFloat(addhours) : 0.0)).toFixed(2)) ;
 		}
 		document.getElementById("grandTotal_"+day).value = thours; //timeStringToFloat(totTime) ;
 		totTime = convertHoursToMin(thours);
@@ -1288,8 +1248,8 @@ function updateTotalHr(day, element)
 		var totTimeRow = issueTable.rows[3];
 		totHrCell = totTimeRow.cells[hStartIndex + day];
 		totHrCell.innerHTML = totTime + "     <a href='javascript:showclkDialog("+day+");'><img id='imgid' src='../plugin_assets/redmine_wktime/images/clockdetail.png' border=0 title=''/></a>";
-	}	
-	
+	}
+
 }
 
 function convertHoursToMin(thours)
@@ -1302,11 +1262,11 @@ function convertHoursToMin(thours)
 
 //Validates the start and end time
 function validateHr(hrFld,day, element)
-{		
+{
 	var hrFldID = hrFld.id;
 	if(document.getElementById(hrFldID) != null)
 	{
-		var hrVal = document.getElementById(hrFldID).value;	
+		var hrVal = document.getElementById(hrFldID).value;
 	}
 	else
 	{
@@ -1325,13 +1285,13 @@ function validateHr(hrFld,day, element)
 		alert("Not a valid time format");
 	}
 	else if((clkinTime > clkoutTime) || ( isNaN(clkinTime) && !isNaN(clkoutTime) ) )
-	{		 
+	{
 		var msg = ( isNaN(clkinTime) && !isNaN(clkoutTime) ) ? "Please enter Clock in." : "The Clock in time can't be greater then clock out.";
 		hrFld.value = hrFld.defaultValue;
 		alert(msg);
 	}
 	else if( !isNaN(clkinTime) && !isNaN(clkoutTime) )
-	{	
+	{
 		if(element[3] != null && element[3] )
 		{
 			updateTotalHr((day+1), element);
@@ -1340,19 +1300,19 @@ function validateHr(hrFld,day, element)
 		else
 		{
 			updateTotalHr((day+1), element);
-			updateRemainingHr((day+1), element);			
+			updateRemainingHr((day+1), element);
 		}
-		
+
 	}
 }
 
-function issueAutocomplete(txtissue,row){    
+function issueAutocomplete(txtissue,row){
         var uid = document.getElementById("user_id").value;
 		var startday = document.getElementById("startday").value;
 		var issUrl = document.getElementById("getissues_url").value;
 		issue_assign_user=issueAssignUser();
        	issUrl= issUrl + "?user_id=" + uid + "&issue_assign_user=" + issue_assign_user + "&startday=" + startday;
-        $(txtissue).autocomplete({                    
+        $(txtissue).autocomplete({
 			source: issUrl ,
 			minLength:2,
 			select: function(event,ui){
@@ -1361,46 +1321,72 @@ function issueAutocomplete(txtissue,row){
         });
 }
 
-function validateMinhour(minHour,nonWorkingDay, minHoursPerWeek, maxHoursPerWeek){
+function validateMinhour(maxHour, minHour, nonWorkingDay, minHoursPerWeek, maxHoursPerWeek, defaultHours){
 	var valid=true;
 	var totalhr = document.getElementById("total_hours").innerHTML;
+	var minHrCond = minHour!=0 && !isNaN(minHour);
+	var maxHrCond = maxHour!=0 && !isNaN(maxHour);
 	totalhr = Number(totalhr);
-	 minHour=minHour.replace(decSeparator, '\.');
-	 if(isNaN(minHour)){
-		minHour=minHour.replace(',', '\.');
-	 }
-	 var msg ="";
-	 if (minHour!=0 && !isNaN(minHour)) { 	
-		 for (i=1;i<=7;i++){
-			var dayTotal= document.getElementById('day_total_'+i).innerHTML;
-			dayTotal = Number(dayTotal.replace(decSeparator, '\.'));
-			if(nonWorkingDay.indexOf(i.toString())== -1 || dayTotal > 0){				
-				
-				if (dayTotal< Number(minHour)){ 
-					msg = minHourAlertMsg;
-					valid=false;
-					break;
-				}
+
+	// Holidays Included into validation
+	defaultHours = Number(defaultHours);
+	$('#issueTable input[name^="holiday_1"').each(function(){
+		if($(this).val() == 'true'){
+			const col = ((this.name).split('_')).pop();
+			let totalDayHrs = 0;
+			$('#issueTable .hrs_col_'+col).map((i, el) => { totalDayHrs+= el.value ? Number(el.value) : 0; });
+			let hourDiff = Number(defaultHours) - totalDayHrs;
+			if(hourDiff > 0) totalhr+= hourDiff;
+		}
+	});
+	minHour=minHour.replace(decSeparator, '\.');
+	if(isNaN(minHour)){
+	minHour=minHour.replace(',', '\.');
+	}
+	var msg ="";
+	if (minHrCond || maxHrCond) {
+		for (i=1;i<=7;i++){
+		var dayTotal= document.getElementById('day_total_'+i).innerHTML;
+		dayTotal = Number(dayTotal.replace(decSeparator, '\.'));
+
+		// Holidays Included into validation
+		const holiday = $($('#issueTable input[name^="holiday_1"')[i-1]).val();
+		if(holiday == 'true' && dayTotal < Number(minHour)){
+			dayTotal += (Number(maxHour) || defaultHours) - dayTotal;
+		}
+
+		if(nonWorkingDay.indexOf(i.toString())== -1 || dayTotal > 0){
+			if (dayTotal < Number(minHour) && minHrCond){
+				msg = minHourAlertMsg;
+				valid=false;
+				break;
 			}
-		 }
-	 }
-	 
-	 if(minHoursPerWeek != 0 && !isNaN(minHoursPerWeek) && totalhr < minHoursPerWeek)
-	 {
-		msg += "\n" + minHourperWeekAlertMsg;
-		valid=false; 
-	 }
-	 if(maxHoursPerWeek != 0 && !isNaN(maxHoursPerWeek) && totalhr > maxHoursPerWeek)   
+
+			if (dayTotal > Number(maxHour) && maxHrCond){
+				msg = maxHourAlertMsg;
+				valid=false;
+				break;
+			}
+		}
+		}
+	}
+
+	if(minHoursPerWeek != 0 && !isNaN(minHoursPerWeek) && totalhr < minHoursPerWeek)
+	{
+	msg += "\n" + minHourperWeekAlertMsg;
+	valid=false;
+	}
+	if(maxHoursPerWeek != 0 && !isNaN(maxHoursPerWeek) && totalhr > maxHoursPerWeek)
 	{
 		msg += "\n" + maxHourperWeekAlertMsg;
 		valid=false;
 	}
-	 
-	 if(!valid)
-	 {
-		 alert(msg);
-	 }
-	if(valid  && submissionack!=''){		
+
+	if(!valid)
+	{
+		alert(msg);
+	}
+	if(valid  && submissionack!=''){
 		valid= confirm(submissionack);
 	}
 	return valid;
@@ -1408,12 +1394,8 @@ function validateMinhour(minHour,nonWorkingDay, minHoursPerWeek, maxHoursPerWeek
 
 function issueAssignUser()
 {
-	var issueAssignUser = document.getElementById('issue_assign_user');
-	var issue_assign_user=0;
-	if(issueAssignUser && issueAssignUser.checked)
-	{
-		issue_assign_user=1;
-	}
+	var issueAssignUser = $('#issue_assign_user').val();
+	var issue_assign_user= issueAssignUser ? issueAssignUser : 0;
 	return issue_assign_user
 }
 
@@ -1439,7 +1421,7 @@ function showclkDialog(day)
 		{
 			$( "#clockInOut-dlg"+i ).dialog( "open" );
 			clkdialogid = i;
-		}		
+		}
 	}
 }
 
@@ -1449,7 +1431,7 @@ function timeFormat(minutes)
 	tot_Hr1 = parseInt(minutes/60) ;
 	tot_min1 = minutes%60;
 	if (tot_min1 > 0)
-	{ 
+	{
 		totTime1 = tot_Hr1 + ":" + tot_min1;
 	}
 	else
@@ -1462,20 +1444,20 @@ function timeFormat(minutes)
 function MinutesDifferent(totTime, stdiff, variation)
 {
 	var minutessdiff;   // minusdiff
-	var seconds,seconds1;	
+	var seconds,seconds1;
 	var arr,arr1;
-	arr = totTime.split(':');	
+	arr = totTime.split(':');
 	arr1 = stdiff.split(':');
 	seconds = arr[0]*3600+arr[1]*60;
 	seconds1 = arr1[0]*3600+arr1[1]*60;
-	
+
 	if(variation == 1)
 	{
 		minutessdiff = seconds + seconds1;
 	}
 	else{
 		minutessdiff = seconds - seconds1;
-	}	 
+	}
 	var d;
 	d = Number(minutessdiff);
 	var h = Math.floor(d / 3600);
@@ -1489,7 +1471,7 @@ function timeStringToFloat(time) {
   var hours = parseInt(hoursMinutes[0], 10);
   var minutes = hoursMinutes[1] ? parseInt(hoursMinutes[1], 10) : 0;
   var originalval = hours + minutes / 60;
-  var result = Math.round(originalval*100)/100 
+  var result = Math.round(originalval*100)/100
   return result;
 }
 
@@ -1501,13 +1483,13 @@ function updateAtt(param, diff,str,id)
 	var date = false;
 	if(document.getElementById('nightshift') != null && !diff )
 	{
-		 nightshift = document.getElementById('nightshift').value;	
-	}	
+		 nightshift = document.getElementById('nightshift').value;
+	}
 	$.ajax({
-	url: '/updateAttendance',
+	url: '/update_attendance',
 	type: 'get',
 	data: {editvalue : param, startdate : datevalue, user_id : userid, nightshift : nightshift, isdate : date},
-	success: function(data){ if(diff){ newClockInOut(data); } },   
+	success: function(data){ if(diff){ newClockInOut(data); } },
 	});
 }
 
@@ -1521,8 +1503,8 @@ function newClockInOut(data)
 		  {
 			  columndata = savedata[i].split(',');
 		  }
-		
-	}	
+
+	}
 	var attnDayEntriesCnt =  document.getElementById('attnDayEntriesCnt_'+clkdialogid) != null ? document.getElementById('attnDayEntriesCnt_'+clkdialogid).value : -1;
 	if(columndata[1] == "00:00" && columndata[2] == "00:00")
 	{
@@ -1533,21 +1515,21 @@ function newClockInOut(data)
 			{
 				document.getElementById('attnEntriesId'+clkdialogid+"_"+i ).value = "";
 			}
-	    }		 
+	    }
 	}
 	else{
 		if(document.getElementById('attnEntriesId'+clkdialogid+"_"+(attnDayEntriesCnt-1) ) != null)
 		{
 			document.getElementById('attnEntriesId'+clkdialogid+"_"+(attnDayEntriesCnt-1) ).value =  columndata[1];
 		}
-		 		
+
 	 }
 	if(document.getElementById('attnstarttime'+clkdialogid+"_"+(attnDayEntriesCnt-1) ) != null)
 		{
 			document.getElementById('start_' + clkdialogid).value = document.getElementById('attnstarttime'+clkdialogid+"_"+(attnDayEntriesCnt-1) ).value;
-			document.getElementById('end_' +clkdialogid).value = document.getElementById('attnendtime'+clkdialogid+"_"+(attnDayEntriesCnt-1) ).value;	
+			document.getElementById('end_' +clkdialogid).value = document.getElementById('attnendtime'+clkdialogid+"_"+(attnDayEntriesCnt-1) ).value;
 		}
-	 
+
 }
 
 function calculatebreakTimeNew(totTime, day, element){
@@ -1557,18 +1539,18 @@ function calculatebreakTimeNew(totTime, day, element){
  startval = document.getElementById(element ? element[0] : 'start_'+day).value;
  endval = document.getElementById(element ? element[1] : 'end_'+day).value;
  workedHours = convertTimeToSec(totTime);
- 
+
  if(startval && endval)
  {
   startTime = convertTimeToSec(startval);
   endTime = convertTimeToSec(endval);
   breakTime = document.getElementById('break_time').value;
-  breakTime = breakTime.split(" "); 
+  breakTime = breakTime.split(" ");
   var startBTime = new Array() ,endBTime = new Array();
   if(breakTime !='')
   {
    for(var i= 0; i < breakTime.length ; i++)
-   {    
+   {
     breakValue =  breakTime[i].split('|');
     if(breakValue[0]&&breakValue[1]&&breakValue[2]&&breakValue[3])
     {
@@ -1587,8 +1569,8 @@ function calculatebreakTimeNew(totTime, day, element){
        else
         workedHours = 0;
       }
-     }     
-    }        
+     }
+    }
    }
   }
  }
@@ -1602,8 +1584,6 @@ function convertTimeToSec(timeval)
  return seconds;
 }
 
-
-
 function convertSecToTime(seconds)
 {
  var d = Number(seconds);
@@ -1613,10 +1593,48 @@ function convertSecToTime(seconds)
  return timeVal;
 }
 
-/* function isDropdown(idName) {
-    var element = document.getElementById(idName);
-	if(element != null){
-		if(element.tagName === 'SELECT') {return true;}
-	}
-    return false;
-} */
+function checkLogPermissions(row){
+	//If desn't have log for other users then disable hours
+	const manage_others_log = $('#manage_others_log').val() || [];
+	const manage_edit_projects = $('#manage_edit_projects').val() || [];
+	const logtime_projects = $('#logtime_projects').val() || [];
+	const edit_own_logs = $('#edit_own_logs').val() || [];
+	const current_user = $('#current_user').val() == 'true';
+	let url = new URL(window.location.href);
+	const sheetView = url.searchParams.get('sheet_view');
+	$("input[name='hours"+row+"[]'], [name='custfield_img"+row+"[]']").each(function(){
+    const projID = $(this).closest('tr').children('td:first').find('select').val();
+		const hours = ($(this).closest('div').children().first()).val();
+		const disabled = $(this).closest('div').find('input[name="disabled'+row+'[]"]').val();
+		const deleteTd = $(this).closest('tr').children('td:last');
+		if(sheetView != 'I' && (!current_user && (hours == '' && !manage_others_log.includes(projID) || hours != '' && !manage_edit_projects.includes(projID)) ||
+			(current_user && !edit_own_logs.includes(projID) && hours != '') || !logtime_projects.includes(projID)))
+		{
+			if(this.type){
+				$(this).prop('disabled', true);
+				($(this).siblings('#disabled'+row+'_').first()).val(true);
+				($(deleteTd).children('a').first()).bind('click', false);
+			}
+			else{
+				$(this).parent('a').bind('click', false);
+			}
+		}
+		else if(!hours && manage_others_log.includes(projID) && !disabled ){
+			if(this.type){
+				$(this).prop('disabled', false);
+				($(this).siblings('#disabled'+row+'_').first()).val(false);
+				($(deleteTd).children('a').first()).unbind('click', false);
+			}
+			else{
+				$(this).parent('a').unbind('click', false);
+			}
+		}
+	});
+}
+
+function renameAttachment(ele, row){
+	const col = (ele.id.split('_')).pop();
+	let eleStr = $(ele).prop('outerHTML');
+	eleStr = eleStr.replaceAll( '0', row);
+	$(ele).replaceWith(eleStr)
+}

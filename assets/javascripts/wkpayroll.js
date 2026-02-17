@@ -5,13 +5,15 @@ function overrideSettings(chkboxelement){
 	var isOverride = chkboxelement.checked;
 	var id = chkboxid.replace("is_override", "");
 	var dependentDD = document.getElementById('dependent_id'+id);
+	var salTypeDD = document.getElementById('salary_type'+id);
 	var factorTxtBox = document.getElementById('factor'+id);
-	dependentDD.disabled = !isOverride;
+	if(dependentDD) dependentDD.disabled = !isOverride;
+	if(salTypeDD) salTypeDD.disabled = !isOverride;
 	factorTxtBox.disabled = !isOverride;
 }
 
 function payrollFormSubmission(isGenerate)
-{ 
+{
 	var dateval = new Date(document.getElementById("to").value);
 	var fromdateval = new Date(document.getElementById("from").value);
 	dateval.setDate(dateval.getDate() + 1);
@@ -20,9 +22,9 @@ function payrollFormSubmission(isGenerate)
 
 	if(!isNaN(dateval.getFullYear()) || !isNaN(fromdateval.getFullYear()))
 	{
-		var isFormSubmission = isGenerate ? confirm(`${confirmationText} ` + salaryDate) : true;
-		document.getElementById("generate").value = isGenerate;
-		if(isFormSubmission)
+		var response = isGenerate && confirm(`${confirmationText} ` + salaryDate);
+		document.getElementById("generate").value = isGenerate && response;
+		if(response || !isGenerate )
 			document.getElementById("query_form").submit();
 	}
 	else
@@ -37,7 +39,7 @@ $(function() {
     $( "#myDialog" ).dialog({
 		autoOpen: false,
 		resizable: false,
-		modal: false,		
+		modal: false,
 		buttons: {
 			"Ok": function() {
 			var fromdate = document.getElementById("start_date").value;
@@ -47,14 +49,14 @@ $(function() {
 				url: runperiodUrl,
 				type: 'get',
 				data: {fromdate:fromdate},
-				success: function(data){ alert("sucessfully updated."); },   
+				success: function(data){ alert("sucessfully updated."); },
 				});
 				$( this ).dialog( "close" );
 			} else {
 				const selectDateText = $('.label_select_date_text').data('select');
 				alert(`${selectDateText}`);
 			}
-				
+
 			},
 			Cancel: function() {
 				$( this ).dialog( "close" );
@@ -76,11 +78,11 @@ function runperiodDatePicker()
 }
 
 function bulk_edit(colID){
-	var button = $('#'+colID).prop('title');
+	var button = $('#'+colID).attr('action');
 	if(button == 'Edit'){
-		$('#'+colID).prop('title', 'Update');
-		$('#'+colID).removeClass();
-		$('#'+colID).addClass("icon icon-save");
+		$('#'+colID).attr('action', 'Update').removeClass().addClass("icon icon-save");
+		$('#'+colID).hide();
+		$('#saveIcon_'+colID).show();
 		$('[id^="td_'+colID+'_"]').each(function(){
 			var text = $(this).text();
 			var name = (this.id).substr(3)
@@ -93,15 +95,16 @@ function bulk_edit(colID){
 		var form_data = {}
 		var isInvalid = false;
 		$('[id^="'+colID+'_"]').each(function(){
-			var val = this.value;
+			var textVal = this.value;
 			var old_val = $('#h_'+this.id).val();
-			if( isNaN(val)){
+			if( isNaN(textVal)){
 				isInvalid = true;
-			}else if(val != old_val){
-				form_data[this.name] = val;
+			}else if(textVal != old_val){
+				depID = $('#dep_'+this.id).val();
+				form_data[this.name] = [textVal, depID]
 			}
 		});
-		
+
 		if(!isInvalid && Object.keys(form_data).length > 0){
 			var url = '/wkpayroll/save_bulk_edit';
 			$.ajax({
@@ -120,7 +123,10 @@ function bulk_edit(colID){
 					$(this).parent().addClass('ajax-loading');
 				},
 				complete: function(){
+					console.log("==innnn")
 					$(this).parent().removeClass('ajax-loading');
+					$('#'+colID).show();
+					$('#saveIcon_'+colID).hide();
 				}
 			});
 		}
@@ -140,9 +146,7 @@ function setUserPayrollValues(colID, isValid){
 			this.value = $('#h_'+this.id).val();
 		}
 		else{
-			$('#'+colID).prop('title', 'Edit');
-			$('#'+colID).removeClass();
-			$('#'+colID).addClass("icon icon-edit");
+			$('#'+colID).attr('action', 'Edit').removeClass().addClass("icon icon-edit");
 			$('#td_'+this.id).html(this.value);
 		}
 	});

@@ -1,61 +1,66 @@
-<%= javascript_include_tag 'index', :plugin => "redmine_wktime" %>
+<%= title l(:label_payroll) %>
+<%= render partial: "wkattendance/render_hr_tabs" %>
 <%= javascript_include_tag 'wkpayroll', :plugin => "redmine_wktime" %>
-<h2><%= l(:label_payroll) %></h2>
-<script type="text/javascript"> 
-    wkattnIndexUrl = '<%=url_for(:controller => "wkattendance", :action => "index", :tab => "leave")%>';     
-    clockInOutUrl = '<%=url_for(:controller => "wkattendance", :action => "clockindex", :tab => "clock")%>';
-	payrollUrl = '<%=url_for(:controller => "wkpayroll", :action => "index", :tab => "payroll")%>';
-	wkSchedulingUrl = '<%=url_for(:controller => "wkscheduling", :action => "index", :tab => "wkscheduling")%>';
-	wkPublicHolidayUrl = '<%=url_for(:controller => "wkpublicholiday", :action => "index", :tab => "wkpublicholiday")%>';
-	wkSurveyUrl = '<%=url_for(:controller => "wksurvey", :action => "user_survey", :tab => "wksurvey", :surveyForType => 'User')%>';
-	grpUrl="<%= "#{url_for(:controller => "wkpayroll", :action => 'getMembersbyGroup')}" %>";
-		//getMembersbyGroup
-</script>
-<%= render_tabs time_expense_tabs %>
-   <% content_for :sidebar do %>
-      <%= render :partial => 'sidebar' %>
-   <% end %>
+
 <%= hidden_field_tag 'back_url', url_for(:controller => params[:controller], :action => params[:action]) %>
 <% wktime_helper = Object.new.extend(WktimeHelper) %>
 <%= form_tag({:controller => controller_name, :action => 'index', :tap => 'payroll'}, :method => :get, :id => 'query_form') do %>
-	<%= hidden_field_tag "searchlist", "#{controller_name}" %>
+	<%= hidden_field_tag "searchlist", controller_name %>
 	<%=h hidden_field_tag('tab', 'payroll') %>
 	<%	groupid =session[:wkpayroll].try(:[], :group_id)
-		userid =session[:wkpayroll].try(:[], :user_id) %>	
-		<table>
-		
-			<% if wktime_helper.validateERPPermission('A_TE_PRVLG') %>
-			<tr>
-			<th><%=l(:label_group_plural)%> </th>
-			<% if !@groups.blank? %>
-				<td>
-					<%=h select_tag('group_id',
-					options_for_select( [["",0]] + (@groups.collect {|p| [p.name, p.id ]}),
-					:selected => !groupid.nil? ? groupid.to_i: 0), :onchange => "grpChanged(this, #{User.current.id}, true);", :style=> "width:300px;") %>
-				</td>
-			<% end %>
-			<th><%=l(:label_member)%></th>
-			<td>
-			<%# show the blank value if more than one user is in the list %>
-			<%=h select_tag('user_id',
-				options_for_select( [[l(:all_users_for_select),"0"]] + @members,
-				:selected => userid.nil? ? (@user.nil? ? User.current.id : @user.id) : userid),
-				:style=> "width:200px;") %></td>
-			</tr>
-			<% end %>
-		</table>
-		<%= render :partial => 'wkpayroll/date_range' %>
-	<% end %>
-
-	<% unless @payrollEntries.blank? %>
-		<div class="total-hours">
-			<p><%= l(:label_total) %>: <%= @payrollEntries.values[0][:currency] %>&nbsp;<%= @total_gross %></p>
+		userid =session[:wkpayroll].try(:[], :user_id) %>
+		<fieldset>
+			<legend><%= l(:label_filter_plural) %></legend>
+			<div style="float:right">
+				<%= render :partial => 'sidebar' %>
+			</div>
+			
+		<div style="display: flex; align-items: center; gap: 10px;">
+			<table>
+				<% if wktime_helper.validateERPPermission('A_PAYRL') %>
+					<tr>
+						<th><%=l(:label_group_plural)%> </th>
+						<% if !@groups.blank? %>
+							<td>
+								<%=h select_tag('group_id',
+								options_for_select( [["",0]] + (@groups.collect {|p| [p.name, p.id ]}),
+								:selected => !groupid.nil? ? groupid.to_i: 0), :onchange => "grpChanged(this, #{User.current.id}, true);", :style=> "width:300px;") %>
+							</td>
+						<% end %>
+						<th style="padding-left: 10px;"><%=l(:label_member)%></th>
+						<td>
+							<%# show the blank value if more than one user is in the list %>
+							<%=h select_tag('user_id',
+								options_for_select( [[l(:all_users_for_select),"0"]] + @members,
+								:selected => userid.nil? ? (@user.nil? ? User.current.id : @user.id) : userid),
+								:style=> "width:200px;") %>
+						</td>
+					</tr>
+				<% end %>
+			</table>
+			<%= render :partial => 'wktime/date_range' %>
 		</div>
-	<% end %>
-<%= render :partial => 'wkpayroll/payroll_list'%>
+			<%=h hidden_field_tag('generate', '') %>
+			<p class="buttons">
+				<%= link_to_function sprite_icon('checked', l(:button_apply)), '$("#query_form").submit(); return false;', :class => 'icon icon-checked' %>
+				<%= link_to sprite_icon('reload', l(:button_clear)), {tab: 'payroll', clear: true}, class: 'icon icon-reload' %>
+				<% if validateERPPermission('A_PAYRL') %>
+				<%= link_to sprite_icon('document', l(:label_generate_salary)), 'javascript:payrollFormSubmission(true);', :name => 'generate', :class => 'icon' %>
+				<%= link_to sprite_icon('document', l(:label_preview_salary)), 'javascript:payrollFormSubmission(false);', :class => 'icon' %>
+				<% end %>
+			</p>
 
+			<%= content_tag :div, class: "label_confirmation_salary_text", data: {confirmation: l(:label_confirmation_salary_text)} do %>
+			<% end %>
+		</fieldset>
+<% end %>
+<% if @payrollEntries.present? %>
+	<div class="total-hours">
+		<p><%= l(:label_total) %>: <%= @payrollEntries.values[0][:currency] %>&nbsp;<%= @total_gross %></p>
+	</div>
 
-<% other_formats_links do |f| %>
+	<%= render :partial => 'wkpayroll/payroll_list'%>
+
 	<% url = "?format=csv"
 		params.each do |name, val|
 			if !['controller', 'action', 'utf8'].include?(name)
@@ -63,7 +68,10 @@
 			end
 		end
 	%>
-	<%= link_to 'CSV', url_for(:controller => controller_name, :action => 'export') + url %>	
+	<% other_formats_links do |f| %>
+		<%= link_to 'CSV', url_for(:controller => controller_name, :action => 'export') + url %> |
+		<%= f.link_to_with_query_parameters 'PDF' %>
+	<% end %>
+<% else %>
+	<p class="nodata"><%= l(:label_no_data) %></p>
 <% end %>
-
-<% html_title(l(:label_ta)) -%>

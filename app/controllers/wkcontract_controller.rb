@@ -18,11 +18,12 @@
 class WkcontractController < WkbillingController
 
 before_action :require_login
+menu_item :wkinvoice
 
 
- def index
-	sort_init 'id', 'asc'
-	sort_update 'contract_number' => "contract_number",
+	def index
+		sort_init 'id', 'asc'
+		sort_update 'contract_number' => "contract_number",
 				'start_date' => "start_date",
 				'end_date' => "end_date",
 				'project' => "projects.name",
@@ -35,7 +36,7 @@ before_action :require_login
 		contact_id = session[controller_name].try(:[], :contact_id)
 		account_id = session[controller_name].try(:[], :account_id)
 		projectId	= session[controller_name].try(:[], :project_id)
-				
+
 		if filter_type == '2' && !contact_id.blank?
 			sqlwhere = sqlwhere + " and "  unless sqlwhere.blank?
 			sqlwhere = sqlwhere + " parent_id = '#{contact_id}'  and parent_type = 'WkCrmContact'  "
@@ -43,7 +44,7 @@ before_action :require_login
 			sqlwhere = sqlwhere + " and "  unless sqlwhere.blank?
 			sqlwhere = sqlwhere + " parent_type = 'WkCrmContact'  "
 		end
-		
+
 		if filter_type == '3' && !account_id.blank?
 			sqlwhere = sqlwhere + " and "  unless sqlwhere.blank?
 			sqlwhere = sqlwhere + " parent_id = '#{account_id}'  and parent_type = 'WkAccount'  "
@@ -51,35 +52,43 @@ before_action :require_login
 			sqlwhere = sqlwhere + " and "  unless sqlwhere.blank?
 			sqlwhere = sqlwhere + " parent_type = 'WkAccount'  "
 		end
-		
+
 		unless projectId.blank?
 			sqlwhere = sqlwhere + " and "  unless sqlwhere.blank?
-			sqlwhere = sqlwhere + " project_id = '#{projectId}' " 
+			sqlwhere = sqlwhere + " project_id = '#{projectId}' "
 		end
-		entries = WkContract.joins("LEFT JOIN (SELECT id, name FROM projects) AS projects ON projects.id = wk_contracts.project_id
-			LEFT JOIN wk_accounts a on (wk_contracts.parent_type = 'WkAccount' and wk_contracts.parent_id = a.id)
-			LEFT JOIN wk_crm_contacts c on (wk_contracts.parent_type = 'WkCrmContact' and wk_contracts.parent_id = c.id)").all
-		unless filter_type == '1' && projectId.blank? 
+		entries = WkContract.joins("LEFT JOIN (
+			SELECT id, name
+			FROM projects #{get_comp_condition('projects', 'WHERE')}) AS projects ON projects.id = wk_contracts.project_id
+			LEFT JOIN wk_accounts a on (wk_contracts.parent_type = 'WkAccount' and wk_contracts.parent_id = a.id) #{get_comp_condition('a')}
+			LEFT JOIN wk_crm_contacts c on (wk_contracts.parent_type = 'WkCrmContact' and wk_contracts.parent_id = c.id) #{get_comp_condition('c')}"
+		).all
+		unless filter_type == '1' && projectId.blank?
 			entries = entries.where(sqlwhere)
 		end
-		formPagination(entries.reorder(sort_clause))
-    end
-
-    def set_filter_session
-		if params[:searchlist] == controller_name
-			session[controller_name] = Hash.new if session[controller_name].nil?
-			filters = [:contact_id, :project_id, :account_id, :polymorphic_filter]
-			filters.each do |param|
-				if params[param].blank? && session[controller_name].try(:[], param).present?
-					session[controller_name].delete(param)
-				elsif params[param].present?
-					session[controller_name][param] = params[param]
+		entries = entries.reorder(sort_clause)
+		respond_to do |format|
+			format.html do
+				formPagination(entries)
+				render :layout => !request.xhr?
+			end
+			format.csv do
+				headers = {contract_number: l(:label_contract_number), type: l(:field_type), name: l(:field_name), project: l(:label_project), start_date: l(:label_start_date), end_date: l(:label_end_date) }
+				data = entries.map do |e|
+					type = e.parent_type == 'WkAccount' ? 'Account' : 'Contact'
+					{ contract_number: e.contract_number, type:  type, name: (e&.parent&.name || ''), project: (e&.project&.name || ""), start_date: e.start_date, end_date: e.end_date }
 				end
+				send_data(csv_export(headers: headers, data: data), type: "text/csv; header=present", filename: "contract.csv")
 			end
 		end
-   end
-   
-   def setLimitAndOffset		
+	end
+
+	def set_filter_session
+		filters = [:contact_id, :project_id, :account_id, :polymorphic_filter]
+		super(filters)
+	end
+
+	def setLimitAndOffset
 		if api_request?
 			@offset, @limit = api_offset_and_limit
 			if !params[:limit].blank?
@@ -92,29 +101,29 @@ before_action :require_login
 			@entry_pages = Paginator.new @entry_count, per_page_option, params['page']
 			@limit = @entry_pages.per_page
 			@offset = @entry_pages.offset
-		end	
+		end
 	end
-	
-	
-   def formPagination(entries)
+
+
+	def formPagination(entries)
 		@entry_count = entries.count
         setLimitAndOffset()
 		@contract_entries = entries.limit(@limit).offset(@offset)
 	end
-	
+
     def edit
 	     @contractEntry = nil
 		 unless params[:contract_id].blank?
 			@contractEntry = WkContract.find(params[:contract_id])
-		 else 
+		 else
 			@contractEntry = @contractEntry
 		 end
     end
 
-    def update
+	def update
 		errorMsg = nil
 	    if params[:contract_id].blank? || params[:contract_id].to_i == 0
-		    wkContract = WkContract.new 
+		    wkContract = WkContract.new
 	    else
 		    wkContract = WkContract.find(params[:contract_id].to_i)
 	    end
@@ -126,30 +135,26 @@ before_action :require_login
 		wkContract.end_date = params[:end_date]
 		unless wkContract.save
 			errorMsg = wkContract.errors.full_messages.join("<br>")
-		end	
+		end
 		if errorMsg.blank?
 			wkContract.contract_number = getPluginSetting('wktime_contract_no_prefix') + wkContract.id.to_s
 			wkContract.save
-			params[:attachments].each do |attachment_param|
-				attachment = Attachment.where('filename = ?', attachment_param[1][:filename]).first
-				unless attachment.nil?
-				  attachment.container_type = WkContract.name
-				  attachment.container_id = wkContract.id
-				  attachment.save
-				end
-			end
+			#for attachment save
+			errorMsg = save_attachments(wkContract.id) if params[:attachments].present?
+			#for mail notification
+			WkContract.send_notification(wkContract)
 			redirect_to :controller => 'wkcontract',:action => 'index' , :tab => 'wkcontract'
 		    flash[:notice] = l(:notice_successful_update)
 		else
 			redirect_to :controller => 'wkcontract',:action => 'edit',:contract_id => params[:contract_id] , :tab => 'wkcontract'
 		    flash[:error] = errorMsg
-			
+
 		end
-    end	
-	
+	end
+
 	def destroy
 		WkContract.find(params[:contract_id].to_i).destroy
 		flash[:notice] = l(:notice_successful_delete)
 		redirect_back_or_default :action => 'index', :tab => params[:tab]
-	end	
+	end
 end

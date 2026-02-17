@@ -15,12 +15,12 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-class WkAssetDepreciation < ActiveRecord::Base
-  unloadable
+class WkAssetDepreciation < ApplicationRecord
+
   belongs_to :inventory_item, :class_name => 'WkInventoryItem'
   belongs_to :gl_transaction , :class_name => 'WkGlTransaction'
   before_destroy :remove_entry_from_gl_transaction
-  
+
   def remove_entry_from_gl_transaction
 	unless self.gl_transaction_id.blank?
 		ledgerId = self.inventory_item.product_item.product.ledger_id
@@ -41,5 +41,15 @@ class WkAssetDepreciation < ActiveRecord::Base
 		end
 	end
   end
- 
+
+  scope :lastDepr, ->(inventory_item_id){
+    joins("INNER JOIN (
+			SELECT MAX(depreciation_date) AS depreciation_date, inventory_item_id
+			FROM wk_asset_depreciations where inventory_item_id = #{inventory_item_id}
+			"+get_comp_con('wk_asset_depreciations')+"group by inventory_item_id
+			)  AS D  ON D.inventory_item_id = wk_asset_depreciations.inventory_item_id  AND D.depreciation_date = wk_asset_depreciations.depreciation_date")
+		.where("wk_asset_depreciations.inventory_item_id = #{inventory_item_id} ")
+		.select("wk_asset_depreciations.depreciation_date, wk_asset_depreciations.currency, wk_asset_depreciations.actual_amount - wk_asset_depreciations.depreciation_amount as current_value")
+  }
+
 end

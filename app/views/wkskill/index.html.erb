@@ -1,0 +1,17 @@
+<%= title l(:label_wk_skill) %>
+<%= render partial: "wkattendance/render_hr_tabs" if params[:project_id].blank? %>
+<% if params[:project_id].blank? %>
+	<%= render partial: "filters" %>
+<% else %>
+	<%= render partial: "proj_filters" %>
+<% end %>
+
+<% if @skillEntries.present? %>
+	<%= render :partial => 'skill_list'%>
+	<span class="pagination"><%= pagination_links_full @skill_pages, @skill_count %></span>
+	<% other_formats_links do |f| %>
+		<%= f.link_to_with_query_parameters 'CSV', {} %>
+	<% end %>
+<% else %>
+	<p class="nodata"><%= l(:label_no_data) %></p>
+<% end %>

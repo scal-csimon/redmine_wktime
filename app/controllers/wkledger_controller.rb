@@ -1,5 +1,5 @@
 # ERPmine - ERP for service industry
-# Copyright (C) 2011-2016  Adhi software pvt ltd
+# Copyright (C) 2011-2020  Adhi software pvt ltd
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -16,13 +16,14 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 class WkledgerController < WkaccountingController
-  unloadable
+
+  menu_item :wkgltransaction
   before_action :check_ac_admin_and_redirect, :only => [:update, :destroy]
   before_action :check_perm_and_redirect, :only => [:index, :edit]
   include WkaccountingHelper
 
 
-    def index
+  def index
 		sort_init 'id', 'asc'
 		sort_update 'name' => "name",
 								'type' => "CASE WHEN wk_ledgers.ledger_type = 'SY' THEN '' ELSE ledger_type END"
@@ -41,15 +42,26 @@ class WkledgerController < WkaccountingController
 		if ledgerType.blank? && name.blank?
 			ledger = WkLedger.all
 		end
-		formPagination(ledger.reorder(sort_clause))
-		@ledgerdd = @ledgers.pluck(:name, :id)
-		@totalAmt = @ledgers.sum(:opening_balance)
-    end
-	
+		ledger = ledger.reorder(sort_clause)
+		respond_to do |format|
+			format.html do
+				formPagination(ledger)
+				@ledgerdd = @ledgers.pluck(:name, :id)
+				@totalAmt = @ledgers.sum(&:opening_balance)
+			  render :layout => !request.xhr?
+      end
+      format.csv do
+        headers = {name: l(:field_name), type: l(:field_type) }
+        data = ledger.collect{|e| {name: e.name, type: getLedgerTypeHash[e.ledger_type] }}
+        send_data(csv_export(headers: headers, data: data), type: "text/csv; header=present", filename: "ledger.csv")
+      end
+		end
+  end
+
 	def edit
 		@ledgersDetail = WkLedger.where(:id => params[:ledger_id].to_i)
 	end
-	
+
 	def update
 		wkledger = nil
 		errorMsg = nil
@@ -60,7 +72,7 @@ class WkledgerController < WkaccountingController
 		end
 		wkledger.name = params[:name]
 		wkledger.ledger_type = params[:ledger_type] unless params[:ledger_type].blank?
-		wkledger.currency = Setting.plugin_redmine_wktime['wktime_currency'] 
+		wkledger.currency = Setting.plugin_redmine_wktime['wktime_currency']
 		wkledger.opening_balance = params[:opening_balance].blank? ? 0 : params[:opening_balance]
 		wkledger.owner = wkledger.ledger_type =='SY' ? 's' : 'u'
 		unless wkledger.save()
@@ -70,11 +82,11 @@ class WkledgerController < WkaccountingController
 		    redirect_to :controller => 'wkledger',:action => 'index' , :tab => 'wkledger'
 		    flash[:notice] = l(:notice_successful_update)
 		else
-			flash[:error] = errorMsg 
+			flash[:error] = errorMsg
 		    redirect_to :controller => 'wkledger',:action => 'edit'
 		end
 	end
-	
+
 	def destroy
 		ledger = WkLedger.find(params[:ledger_id].to_i)
 		if ledger.ledger_type == 'SY'
@@ -86,28 +98,19 @@ class WkledgerController < WkaccountingController
 		end
 		redirect_back_or_default :action => 'index', :tab => params[:tab]
 	end
-	
+
 	def set_filter_session
-		if params[:searchlist] == controller_name
-			session[controller_name] = Hash.new if session[controller_name].nil?
-			filters = [:ledger_type, :name]
-			filters.each do |param|
-				if params[param].blank? && session[controller_name].try(:[], param).present?
-					session[controller_name].delete(param)
-				elsif params[param].present?
-					session[controller_name][param] = params[param]
-				end
-			end
-		end
+		filters = [:ledger_type, :name]
+		super(filters)
 	end
-	
+
 	def formPagination(entries)
 		@entry_count = entries.count
         setLimitAndOffset()
 		@ledgers = entries.order(:id).limit(@limit).offset(@offset)
 	end
-	
-	def setLimitAndOffset		
+
+	def setLimitAndOffset
 		if api_request?
 			@offset, @limit = api_offset_and_limit
 			if !params[:limit].blank?
@@ -120,7 +123,7 @@ class WkledgerController < WkaccountingController
 			@entry_pages = Paginator.new @entry_count, per_page_option, params['page']
 			@limit = @entry_pages.per_page
 			@offset = @entry_pages.offset
-		end	
+		end
 	end
 
 end

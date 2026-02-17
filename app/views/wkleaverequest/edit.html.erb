@@ -1,6 +1,18 @@
-<h2><%= l(:label_new_leave_request) %></h2>
+<%= javascript_include_tag 'leaverequest', :plugin => "redmine_wktime" %>
+<h2><%= @leaveReqEntry.blank? ? l(:label_new_leave_request) : l(:label_edit_leave_request) %></h2>
 <%= form_tag({:action => 'save'}, :method => :post) do %>
 	<%= hidden_field_tag('lveReqID', @leaveReqEntry.try(:id)) %>
+	<%= hidden_field_tag('user_id', @leaveReqEntry.blank? ? User.current.id : @leaveReqEntry.user_id) %>
+	<% isUser = @leaveReqEntry.try(:user_id) == User.current.id %>
+	<% 
+		if @leaveReqStatus == 'S' && isLeaveReqAdmin && !isUser
+			show = true
+			disable = false
+		else
+			show = @leaveReqEntry.present? ? @leaveReqEntry.reviewer_comment ? true : false : false
+			disable = true
+		end
+	%>
 	<fieldset class="box tabular">
 		<table>
 			<tr>
@@ -8,14 +20,15 @@
 				<td align="left"><%=  @leaveReqEntry.blank? ? User.current.name : @leaveReqEntry.try(:user_name) %></td>
 			<tr>
 			<tr>
-				<th align="left"><%= l(:label_status) %></th>
+				<th align="left"><%= l(:field_status) %></th>
 				<td align="left"><%= getLeaveStatus[@leaveReqStatus] %></td>
 			<tr>
 			<tr>
 				<th align="left"><%= l(:label_leave_type) %></th>
 				<td align="left">
 					<%=h select_tag("leave_type_id", options_for_select(get_leave_type, selected: @leaveReqEntry.try(:leave_type_id)), 
-						disabled: @readonly) %>
+						disabled: @readonly) %>					
+					<span id="AvailableHours" style="padding-left: 5px;"></span>
 				</td>
 			<tr>
 			<tr>
@@ -27,11 +40,37 @@
 				%>
 			</tr>
 			<tr>
-				<th align="left"><%= l(:label_reason) %></th>
+				<th align="left"><%= l(:label_comment) %></th>
 				<td align="left">
 					<%= text_area_tag("leave_reasons", @leaveReqEntry.try(:leave_reasons), rows: 5, cols: 60, disabled: @readonly) %>
 				</td>
 			</tr>
+			<% if show %>
+				<tr>
+					<th align="left"><%= l(:label_reviewer_cmt) %></th>
+					<td align="left">
+						<%= text_area_tag("reviewer_comment", @leaveReqEntry.try(:reviewer_comment), rows: 5, cols: 60, disabled: disable ) %>
+					</td>
+				</tr>
+			<% end %>
+			<% if @leaveReqStatus.present? && !['N', 'C'].include?(@leaveReqStatus) %>
+				<tr>
+					<th align="left"><%= l(:label_submitted_date) %></th>
+					<td align="left"><%= get_status_date(@leaveReqEntry, "S").to_date %></td>
+				</tr>
+			<% end %>
+			<% if @leaveReqStatus == 'A' %>
+				<tr>
+					<th align="left"><%= l(:label_approved_date) %></th>
+					<td align="left"><%= get_status_date(@leaveReqEntry, "A").to_date %></td>
+				</tr>
+			<% end %>
+			<% if @leaveReqStatus == 'R' %>
+				<tr>
+					<th align="left"><%= l(:label_rejected_date) %></th>
+					<td align="left"><%= get_status_date(@leaveReqEntry, "R").to_date %></td>
+				</tr>
+			<% end %>
 		</table>
 	</fieldset>
 	<div>

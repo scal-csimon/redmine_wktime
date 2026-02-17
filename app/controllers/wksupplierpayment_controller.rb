@@ -1,5 +1,5 @@
 # ERPmine - ERP for service industry
-# Copyright (C) 2011-2017  Adhi software pvt ltd
+# Copyright (C) 2011-2020  Adhi software pvt ltd
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -15,33 +15,33 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 class WksupplierpaymentController < WkpaymententityController
-  unloadable
+
   menu_item :wkrfq
-  
+
 	def getOrderAccountType
 		'S'
 	end
-	
+
 	def getInvoiceType
 		'SI'
 	end
-	
+
 	def getItemLabel
 		l(:label_supplier_payment)
 	end
-	
+
 	def getEditHeaderLabel
 		l(:label_supplier_payment)
 	end
-	
+
 	def getOrderContactType
 		'SC'
 	end
-	
+
 	def getAuotPostId
 		'supplier_invoice_auto_post_gl'
 	end
-	
+
 	def getAutoPostModule
 		'supplier_payment'
 	end
@@ -49,16 +49,28 @@ class WksupplierpaymentController < WkpaymententityController
 	def getAccountDDLbl
 		l(:label_supplier_account)
 	end
-	
-	def check_permission		
-		return validateERPPermission("B_PUR_PRVLG") || validateERPPermission("A_PUR_PRVLG") 
+
+	def check_permission
+		return validateERPPermission("B_PUR_PRVLG") || validateERPPermission("A_PUR_PRVLG")
 	end
-	
+
 	def check_crm_admin_and_redirect
-	  unless validateERPPermission("A_PUR_PRVLG") 
+	  unless validateERPPermission("A_PUR_PRVLG")
 	    render_403
 	    return false
 	  end
-    end
+  end
+
+	def additionalContactType
+		false
+	end
+
+	def additionalAccountType
+		false
+	end
+
+	def getLabelNewPayment
+		l(:label_supplier_payment)
+	end
 
 end

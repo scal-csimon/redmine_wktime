@@ -1,57 +1,80 @@
+<%= stylesheet_link_tag 'wk-time', plugin: "redmine_wktime" %>
 <%= hidden_field_tag 'back_url', url_for(:controller => params[:controller], :action => params[:action]) %>
-<script type="text/javascript"> 
-	productModifyUrl="<%= "#{url_for(:controller => "wklogmaterial", :action => 'modifyProductDD')}" %>";
+<script type="text/javascript">
+	productModifyUrl="<%= "#{url_for(:controller => "wklogmaterial", :action => 'modify_product_dd')}" %>";
 </script>
-	<%= form_tag({:controller => controller_name, :action => 'index', :tab => controller_name}, :method => :get, :id => 
+	<%= form_tag({:controller => controller_name, :action => 'index', :tab => controller_name}, :method => :get, :id =>
      'query_form') do %>
 		<%= hidden_field_tag "searchlist", controller_name %>
 		<%=h hidden_field_tag('tab', controller_name) %>
 		<%
+			wktime_helper = Object.new.extend(WktimeHelper)
 			productId = session[controller_name].try(:[], :product_id)
 			brandId = session[controller_name].try(:[], :brand_id)
 			locationId =session[controller_name].try(:[], :location_id)
 			availabilityId =session[controller_name].try(:[], :availability)
 			projectId =session[controller_name].try(:[], :project_id)
+			isDisposed =session[controller_name].try(:[], :is_dispose)
+			showOnMap =session[controller_name].try(:[], :show_on_map)
+			availableItems =session[controller_name].try(:[], :available_items)
+			brandSql = nil
+			if productId.present?
+				brandSql = 'id in (select brand_id from wk_brand_products where product_id = ' + productId.to_s + get_comp_cond('wk_brand_products') + ')'
+			end
 		%>
-		<%	projArr = getProjects %>
-		<%	projArr[0] = [l(:label_all_projects),'AP'] %>
-		<%	projArr.unshift(["",''])  %>
-		<fieldset>
-				<table>
-					<tr>
-						<th align="left"><%= l(:label_location) %></th>
-						<td align="left" style="padding-left:40px;"><%=h select_tag("location_id", generic_options_for_select(WkLocation, nil, 'name', 'name', 'id', locationId, true)) %></td>
-						<% if controller.getItemType == "I" || controller.getItemType == "A" %>
-							<th align="left"><%= l(:label_product) %></th>
-							<td align="left" style="padding-left:40px;">
-								<%=h select_tag("product_id", generic_options_for_select(WkProduct, nil, 'name', 'name', 'id', productId, true)) %>
-							</td>
-						<% end %>
-						<% if controller.getItemType == "I" %>
-							<th align="left"><%= l(:label_brand) %></th>
-							<td align="left" style="padding-left:40px;">
-								<%=h select_tag("brand_id", generic_options_for_select(WkBrand, nil, 'name', 'name', 'id', brandId, true)) %>
-							</td>
-						<% else %>
-							<th align="left"><%= l(:label_availability) %></th>
-							<td align="left" style="padding-left:40px;">
-								<%=h select_tag("availability", options_for_select(availabilityHash.invert, :selected=> availabilityId)) %>
-							</td>
-						<% end %>
-						<th align="left"><%= l(:label_project) %></th>
-						<td align="left" style="padding-left:40px;"><%=h select_tag("project_id", options_for_select(projArr, :selected=> projectId)) %></td>
-					</tr>
-			    </table>
-				<p style="float:right; margin-top:-30px;">					
-					<%= link_to controller.newItemLabel, url_for(:controller => controller_name, :action => 'edit', :newItem => true), :class => 'icon icon-time-add' %>
-				</p>
-				<p class="buttons">
-					<%= link_to_function l(:button_apply), '$("#query_form").submit(); return false;', :class => 'icon icon-checked' %>
-					<%#= link_to l(:button_apply), {:controller => controller_name, :action => action_name}, :class => 'icon icon-checked' %>
-					<%= link_to l(:button_clear), {:controller => controller_name, :action => action_name, :tab => 'clock'}, :class => 'icon icon-reload' %>
-				</p>
+		<fieldset style="font-wight: bold;">
+			<div style="float:right">
+				<% if controller.getItemType == "I" %>
+					<%= link_to sprite_icon('add', l(:label_assemble_item)), url_for(controller: controller_name, action: 'assemble_item', isAssemble: true), class: 'icon icon-add' %>
+				<% end %>
+				<%= link_to sprite_icon('add', controller.newItemLabel), url_for(:controller => controller_name, :action => 'edit', :newItem => true), :class => 'icon icon-add' %>
+			</div>
+			<%= l(:field_location) %>&nbsp;
+			<%=h select_tag("location_id", generic_options_for_select(WkLocation, nil, 'name', 'name', 'id', locationId, true)) %>&nbsp;
+			<% if controller.getItemType == "I" || controller.getItemType == "A" %>
+				<%= l(:label_product) %>&nbsp;
+				<%=h select_tag("product_id", generic_options_for_select(WkProduct, nil, 'name', 'name', 'id', productId, true), :onchange => "if(#{ controller.getItemType == "I"  }) { productChanged(this.id, 'brand_id', #{User.current.id}, false, true, null, null);}") %>&nbsp;
+			<% end %>
+			<% if controller.getItemType == "I" %>
+				<%= l(:label_brand) %>&nbsp;
+				<%=h select_tag("brand_id", generic_options_for_select(WkBrand, brandSql, 'name', 'name', 'id', brandId, true)) %>&nbsp;
+				</td>
+			<% else %>
+				<%= l(:label_availability) %>&nbsp;
+				<%=h select_tag("availability", options_for_select(availabilityHash.invert, :selected=> availabilityId)) %>
+				</td>&nbsp;
+			<% end %>
+			<%= l(:label_project) %>&nbsp;
+			<%=h select_tag("project_id", options_for_select(getProjectArr, :selected=> projectId)) %>&nbsp;
+			<% if controller.getItemType == "A" %>
+				<label><%= check_box_tag('is_dispose', 1, isDisposed) %> <%= l(:label_disposed) %></label>&nbsp;
+			<% end %>
+			<% if controller.getItemType == "I" %>
+				<label> <%= l(:label_show_available_items) %> <%= check_box_tag('available_items', 1, availableItems) %></label>
+			<% end %>
+			<div style="padding-top:5px;">
+				<% if controller.getItemType == "I" %>
+					<%= l(:label_text_search) %> <%= text_field_tag 'name', controller.getSession(:name), :size => 15 %>
+				<% end %>
+				<%= link_to_function sprite_icon('checked', l(:button_apply)), '$("#query_form").submit(); return false;', :class => 'icon icon-checked' %>&nbsp;
+				<%= link_to sprite_icon('reload', l(:button_clear)), {tab: controller_name, clear: true}, class: 'icon icon-reload' %>
+				<% if wktime_helper.isChecked('asset_save_geo_location') && params[:controller] == 'wkasset' %>
+					<label style="padding-left:5px">
+						<%= check_box_tag('show_on_map', true, showOnMap, onclick: '$("#query_form").submit(); return false;') %>
+						<%= l(:label_show_on_map) %>
+					</label>
+				<% end %>
+			</div>
 		</fieldset>
-		</br>
+		<br>
 	<% end %>
- <%= render :partial => 'wkproductitem/product_item_list'%>
- <span class="pagination"><%= pagination_links_full @entry_pages, @entry_count %></span>
+
+<% if @productInventory.present? %>
+	<%= render :partial => 'wkproductitem/product_item_list'%>
+ 	<span class="pagination"><%= pagination_links_full @entry_pages, @entry_count %></span>
+	<% other_formats_links do |f| %>
+		<%= f.link_to_with_query_parameters 'CSV', {} %>
+	<% end %>
+<% else %>
+	<p class="nodata"><%= l(:label_no_data) %></p>
+<% end %>

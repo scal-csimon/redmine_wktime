@@ -1,0 +1,85 @@
+<%
+    load("plugins/redmine_wktime/app/views/wkrule/incometax/#{getTaxSettings('tax_rule')}.rb")
+	taxRule = Object.new.extend(PayrollTax)
+    taxComp =  getTaxSettings('tax_settings').blank? ? {} : JSON.parse(getTaxSettings('tax_settings'))
+    if action_type != "taxSettings"
+        taxRule.getUserSalaries(userId)
+    end
+%>
+<% if(action_type == "taxSettings") %>
+    <h2><%= l(:label_income_tax_settings) %> (<%= l("#{getTaxSettings('tax_rule')}") %>)</h2>
+    <div class="contextual">
+        <%= render :partial => 'sidebar' %>
+    </div>
+    <%= render partial: "wkattendance/render_hr_tabs" %>
+    <% if request.post?
+        taxRule.saveTaxComponent(params[:taxsettings])
+        flash[:notice] = l(:notice_successful_update)
+        controller.redirect_to action: 'income_tax', tab: "payroll", action_type: 'taxSettings'
+       end %>
+    <%= form_tag({controller: controller_name, action: 'income_tax', action_type: 'taxSettings'}, method: :post) do %>
+        <fieldset>
+            <table>
+                <tr>
+                    <td><%= "Annual Gross" %></td>
+                    <td><%= select_tag 'taxsettings[annual_gross]', options_for_select(getSalaryCompNames.invert, taxComp["annual_gross"]) %></td>
+                </tr>
+            </table>
+        </fieldset>
+        <div><%= submit_tag l(:button_save) %></div>
+        <% html_title(l(:label_income_tax_settings)) -%>
+    <% end %>
+<% elsif(action_type == "userSettings") %>
+    <%= javascript_tag do %>
+        function calculateTax(userId, compId){
+            if(!validateUserSalComps()){
+                var url = "/wkpayroll/income_tax?action_type="+ 'calculateTax' +"&user_id="+userId;
+                $.ajax({
+                    url: url,
+                    type: 'post',
+                    data: $('#query_form').serialize(),
+                    cache: false,
+                    success: function(data){
+                        $('#is_override'+compId).prop('checked', true);
+                        $('#factor'+compId).prop('disabled', false).val(data.monthTax);
+                    },
+                    beforeSend: function(){
+                        $(this).parent().addClass('ajax-loading');
+                    },
+                    complete: function(){
+                        $(this).parent().removeClass('ajax-loading');
+                    }
+                });
+            }
+        }
+
+        function validateUserSalComps(){
+            var isEdited = false;
+            $(".userSalComps").each(function(){
+                editedVal = $("#h_"+this.id).val();
+                if(this.value == -1 && (editedVal == "" || editedVal == 0)) editedVal = -1;
+                if(editedVal != this.value) isEdited = true;
+            });
+            if(isEdited) isEdited = !confirm("Are you sure want to apply tax without save?");
+            return isEdited;
+        }
+    <% end %>
+    <% component = taxRule.getAnnualComponent(userId) %>
+    <% taxComp.each do |name, id| %>
+        <%= hidden_field_tag(name, component[name]) if name != "annual_prof_tax" && name != "annual_std_deduction"  %>
+    <% end %>
+    <div class="box tabular">
+        <table>
+            <tr>
+                <td><%= "Annual Gross" %></td><td><%= component["annual_gross"].blank? ? 0 : "%.2f" % component["annual_gross"] %></td>
+            </tr>
+        </table>
+    <div style="clear:both;"></div>
+<%
+# For Apply Tax
+else
+    monthTax = taxRule.calculate_tax(userId)
+    data = {monthTax: monthTax}
+    controller.redirect_to action: "income_tax", data: data, action_type: "calculatetax"
+ end
+ %>

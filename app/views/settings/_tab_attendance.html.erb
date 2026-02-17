@@ -2,8 +2,8 @@
 attendanceAlertMsg = "<%= l(:text_are_you_sure) %>";
 selectListAlertMsg = "<%=l(:actionview_instancetag_blank_option) %>";
 issueExistsAlertMsg = "<%=l(:label_wk_leave_exists) %>";
-issueUrl="<%= "#{url_for(:controller => 'wkattendance', :action => 'getIssuesByProject')}" %>";
-projectUrl="<%= "#{url_for(:controller => 'wkattendance', :action => 'getProjectByIssue')}" %>";
+issueUrl="<%= "#{url_for(:controller => 'wkattendance', :action => 'get_issues_by_project')}" %>";
+projectUrl="<%= "#{url_for(:controller => 'wkattendance', :action => 'get_project_by_issue')}" %>";
 lblInvalid= " <%= (CGI.unescapeHTML l('activerecord.errors.messages.invalid')).html_safe %>";
 lblDaysPerMonth = "<%=l(:label_hours_per_month) %>";
 lblAccrual = "<%=l(:label_wk_leave_accrual) %>";
@@ -12,7 +12,6 @@ lblAccrualMultiplier = "<%=l(:label_accrual_multiplier) %>";
 lblLeaveIssue = "<%=l(:label_wk_leave_issue) %>";
 lblYear = "<%=l(:label_year) %>";
 </script>
-<%= render :partial => 'settings/ftte_settings' %>
 <div class="splitcontent">
 <div class="box tabular settings">
 <fieldset>
@@ -20,6 +19,10 @@ lblYear = "<%=l(:label_year) %>";
 		
 	<p>
 	<%= check_box_tag('settings[wktime_enable_clock_in_out]', 1, @settings['wktime_enable_clock_in_out'].to_i == 1) %> <label><%= l(:label_wk_enable_clock_in_out) %></label>
+	</p>
+	<p>
+		<%= check_box_tag('settings[att_save_geo_location]', 1, @settings['att_save_geo_location'].to_i == 1) %>
+		<label for="settings_att_save_geo_location"><%= l(:label_save_geo_location) %></label>
 	</p>
 	<p>
 	<%= check_box_tag('settings[wktime_work_time_header]', 1, @settings['wktime_work_time_header'].to_i == 1) %> <label><%= l(:label_wk_work_time_header) %></label>
@@ -43,7 +46,7 @@ lblYear = "<%=l(:label_year) %>";
 		%>
 	<label><%= l(:label_wk_break_time) %></label>
 		<%=  select_tag('settings[wktime_break_time]',
-			options_for_select(breakTime, :selected => 'settings[wktime_break_time]'), :multiple=> true, :style => "width:200px; height:100px;")%>	
+			options_for_select(breakTime, :selected => 'settings[wktime_break_time]'), :multiple=> true, :style => "width:200px; height:100px;", class: 'multi-row')%>	
 
 	</p>			
 	<p>
@@ -92,7 +95,6 @@ lblYear = "<%=l(:label_year) %>";
 			<p><%= l(:label_hours_note) %></p>		
 	</div>
 	
-	<p>
 		<%
 		leave = []
 		issue_list = Issue.order('subject')
@@ -106,67 +108,25 @@ lblYear = "<%=l(:label_year) %>";
 		projects = Project.where("#{Project.table_name}.status not in(#{Project::STATUS_CLOSED},#{Project::STATUS_ARCHIVED})").order('name')
 		wktime_helper = Object.new.extend(WktimeHelper)
 		projArr = wktime_helper.options_for_wktime_project(projects,false)
-		
-		if(@settings['wktime_leave'].blank?)
-			leave = ''
-		else
-			@settings['wktime_leave'].each do |element|
-			  listboxArr = element.split('|')
-			  issueId = listboxArr[0]
-			  issueName = issuehash[issueId.to_i].blank? ? issueId : issuehash[issueId.to_i]
-			  leaveAccrual = listboxArr[1].blank? ? "" : listboxArr[1]
-			  accrualAfter = listboxArr[2].blank? ? "" : listboxArr[2]
-			  optionText = leaveAccrual.blank? ? issueName : issueName + " : "  + leaveAccrual + " " + l(:label_hours_per_month) + " " + l(:label_wk_leave_accrual_after) + " " + accrualAfter + " " + l(:label_year)
-			  leave << [optionText,element]
-			end
-		end
-		%>
-		<label><%= l(:label_wk_leave) %></label>
-			<%=  select_tag('settings[wktime_leave]',
-				options_for_select(leave, :selected => 'settings[wktime_leave]'), :multiple=> true, :style => "min-width:200px; height:100px;")%>	
 
-		</p>			
-		<p>
-			<%= link_to l(:button_add), "javascript:showLeaveDialog('Add');", :class => "button"%>  |
-			<%= link_to l(:button_edit), "javascript:showLeaveDialog('Edit');", :class => "button"%>  |
-			<%= link_to l(:button_delete), "javascript:removeSelectedValue('settings_wktime_leave');", :class => "button" %>
-		</p>
+		issueIdArr =Array.new
+	    if(wktime_helper.getLeaveSettings.blank?)
+			leaveIssueslist = []
+		else
+			wktime_helper.getLeaveSettings.each do |element|
+			   listboxArr = element.split('|')
+			   issueIdArr << listboxArr[0]
+			end
+			issueIds = issueIdArr.join(',')
+		    leaveIssues = Issue.select(:id, :subject).where("id in (#{issueIds})")
+			leaveIssueslist = leaveIssues.collect {|issue| [issue.subject, issue.id]}
+		end
+		leaveIssueslist.unshift(["",0]) 
+	%>
 	
-	<div id="leave-dlg" title="<%= l(:label_wk_leave) %>">
-		<table>
-			<tr>
-				<th align="left"><label><%= l(:label_project) %></label></th>
-				<td class="project" align="left"><%=h select_tag('leave_project', options_for_select(projArr),:onchange => "projectChanged(this,-1);") %></td>
-			</tr>
-			<tr>
-				<th align="left"><label><%= l(:label_wk_leave_issue) %></label><span style="margin-left:0.8em;"></span></th>
-				<td class="issue" align="left"><%=h select_tag('leave_issue', options_for_select(issueslist)) %></td>
-			</tr>
-			<tr>
-				<th align="left"><label><%= l(:label_wk_leave_short_name) %></label></th>
-				<td><%= text_field_tag 'wk_leave_short_name','', :size => 4, :maxlength => 4 %></td>
-			</tr>
-			<tr>
-				<th align="left"><label><%= l(:label_wk_leave_accrual) %></label></th>
-				<td><%= text_field_tag('leave_accrual','', :size => 2.5, :maxlength => 6) %>&nbsp<%= l(:label_hours_per_month) %></td>		
-			</tr>
-			<tr>
-				<th align="left"><label><%= l(:label_accrual_multiplier) %></label></th>
-				<td><%= text_field_tag 'leave_accrual_multiplier','1', :size => 2.5, :maxlength => 6 %></td>
-			</tr>
-			<tr>
-				<th align="left"><label><%= l(:label_wk_leave_accrual_after) %></label></th>
-				<td><%= text_field_tag 'leave_accrual_after','', :size => 2.5, :maxlength => 6 %>&nbsp<%= l(:label_year) %></td>
-			</tr>
-			<tr>
-				<th align="left"><label><%= l(:button_reset) %> <%= l(:label_month) %></label></th>
-				<td><%=h select_tag('wk_attn_leave_reset_month', options_for_select(l('date.month_names').collect.with_index.to_a)) %></td>								   	
-			</tr>
-			<tr>
-				<%= hidden_field_tag :hdnAction, "" %>
-			</tr>
-		</table>
-	</div>
+	<p><label><%= l(:label_public_holiday) %></label>
+	 <%= select_tag 'settings[wktime_holiday]', options_for_select(leaveIssueslist, :selected =>  @settings['wktime_holiday']) %></p>
+	
 	<%
 		noOfDays = []
 		for i in 0..31
@@ -187,7 +147,7 @@ lblYear = "<%=l(:label_year) %>";
 		custom_fields = UserCustomField.order('name')
 		allFields = Hash.new()
 		fldInFiles = Hash.new()		
-		allFields = {"user_id" => "#{l(:label_user_id)}", "start_time" => "#{l(:label_start_time)}", "end_time" => "#{l(:label_end_time)}", "hours" => "#{l(:label_hours)}", "id1" => "#{l(:field_id1)}", "id2" => "#{l(:field_id2)}", "id3" => "#{l(:field_id3)}" }
+		allFields = {"user_id" => "#{l(:label_user_id)}", "start_time" => "#{l(:label_start_time)}", "end_time" => "#{l(:label_end_time)}", "hours" => "#{l(:field_hours)}", "id1" => "#{l(:field_id1)}", "id2" => "#{l(:field_id2)}", "id3" => "#{l(:field_id3)}" }
 		unless custom_fields.blank?		
 			cfdate = custom_fields.select {|cf| cf.field_format == 'date'}
 			cfids = custom_fields.select {|cf| cf.field_format == 'string' || cf.field_format == 'int' }			
@@ -221,30 +181,10 @@ lblYear = "<%=l(:label_year) %>";
 			available_fields = allFields.select {|key,value|  !selectedfld.include? key.to_s}
 		end
 	%>
-	<!-- <p>
-		<label><%#= l(:label_wk_attn_join_date) %> </label><%#=h select_tag('settings[wktime_attn_join_date_cf]', 
-			options_for_select(cfd, :selected =>  @settings['wktime_attn_join_date_cf'])) %>
-	</p>
-	 <p>
-		<label><%#= l(:label_wk_attn_termination_date) %> </label><%#=h select_tag('settings[wktime_attn_terminate_date_cf]', 
-			options_for_select(cfd, :selected =>  @settings['wktime_attn_terminate_date_cf'])) %>
-	</p>
-	 <p>
-		<label><%#= l(:label_wk_attn_user_dob) %> </label><%#=h select_tag('settings[wktime_attn_user_dob_cf]', 
-			options_for_select(cfd, :selected =>  @settings['wktime_attn_user_dob_cf'])) %>
-	</p>
-	 <p>
-		<label><%#= l(:label_wk_designation) %> </label><%#=h select_tag('settings[wktime_attn_designation_cf]', 
-			options_for_select(cfs, :selected =>  @settings['wktime_attn_designation_cf'])) %>
-	</p>
 	<p>
-		<label><%#= l(:label_employee_id) %> </label><%#=h select_tag('settings[wktime_attn_employee_id_cf]', 
-			options_for_select(cfs, :selected =>  @settings['wktime_attn_employee_id_cf'])) %>
+		<%= check_box_tag('settings[wktime_period_end_process]', 1, @settings['wktime_period_end_process'].to_i == 1) %>
+		<label><%= l(:label_period_end_process) %></label>
 	</p>
-	<p>
-		<label><%#= l(:label_gender) %> </label><%#=h select_tag('settings[wktime_gender_cf]', 
-			options_for_select(cfs, :selected =>  @settings['wktime_gender_cf'])) %>
-	</p> -->
 </fieldset>
 </div>
 
@@ -311,7 +251,7 @@ lblYear = "<%=l(:label_year) %>";
 		<tbody>
 			<tr valign="top">
 				<td>					
-					<%= select_tag('settings[wktime_avialable_fields]', options_for_select(available_fields.invert), :multiple => true, :size=> 10, :style => "width:150px; ") %>
+					<%= select_tag('settings[wktime_avialable_fields]', options_for_select(available_fields.invert), :multiple => true, :size=> 10, :style => "width:150px;", class: 'multi-row') %>
 				</td>
 				<td valign="center">
 					<button type="button" onclick="listbox_moveacross('settings_wktime_avialable_fields', 'settings_wktime_fields_in_file')" id="rightmove" style="position:relative; top:40px;">&gt;&gt;</button>
@@ -319,7 +259,7 @@ lblYear = "<%=l(:label_year) %>";
 					<button type="button" onclick="listbox_moveacross('settings_wktime_fields_in_file', 'settings_wktime_avialable_fields')" id="rightmove" style="position:relative; top:50px;">&lt;&lt;</button>
 				</td>
 				<td>					
-					<%= select_tag('settings[wktime_fields_in_file]', options_for_select(fldInFiles.invert, :selected =>  @settings['wktime_fields_in_file'] ), :multiple => true, :size => 10, :style => "width:150px;") %>
+					<%= select_tag('settings[wktime_fields_in_file]', options_for_select(fldInFiles.invert, :selected =>  @settings['wktime_fields_in_file'] ), :multiple => true, :size => 10, :style => "width:150px;", class: 'multi-row') %>
 				</td>
 			</tr>
 		</tbody>

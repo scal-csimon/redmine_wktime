@@ -1,6 +1,5 @@
 <%= stylesheet_link_tag 'wk-time', :plugin => "redmine_wktime" %>
-<div class="autoscroll">
-<table class="list time-entries">
+<table class="list time-entries" style="width: <%= width %>; float:left;">
 <%	openingBalHash = getEachLedgerBSAmt(@transDate, [@selectedLedger.ledger_type]) unless @ledgerId.blank? || @transDate.blank?
 	unless @selectedLedger.blank? || (incomeLedgerTypes.include? @selectedLedger.ledger_type) || (expenseLedgerTypes.include? @selectedLedger.ledger_type)
 		openingBalance = openingBalHash[@selectedLedger.name] unless openingBalHash.blank? || openingBalHash[@selectedLedger.name].blank?
@@ -16,7 +15,7 @@
 	<thead>
 		</tr>
 			<tr>
-					<th class="lbl-txt-align"><%=  l(:label_date_range) %></th>
+					<%= sort_header_tag('trans_date', :caption => l(:label_date_range), class: "lbl-txt-align", title: "") %>
 					<th class="lbl-txt-align"><%= l(:label_debit) %></th>
 					<th class="lbl-txt-align"><%= l(:label_credit) %></th>
 					<th class="lbl-txt-align"><%= l(:label_closing_balance) %></th>
@@ -24,38 +23,25 @@
 			</tr>
 	</thead>
 	<tbody>
- 		<%  
-			debitTotal = 0
-			creditTotal = 0
-			closeBal = 0 
-		%>
 		<% @summaryHash.each do |key, value| %>
-			<% debitTotal += value[:DT].to_f unless value[:DT].blank? %>
-			<% creditTotal += value[:CT].to_f unless value[:CT].blank? %>
-			<%	diff = isSubCr ? (value[:DT].to_f - value[:CT].to_f) : (value[:CT].to_f - value[:DT].to_f) %>
-			<% if key == @summaryHash.keys.first
-					closeBal = diff + openingBalance.to_f
-				else 
-					closeBal = diff + closeBal
-				end %>
+			<% # getSummeryamount(key, value) %>
 			<tr>
 				<td class="lbl-txt-align"><%=h key %></td>
-				<td class="lbl-txt-align"><%=h value[:DT].to_f %></td>
-				<td class="lbl-txt-align"><%=h value[:CT].to_f %></td>
-				<td class="lbl-txt-align"><%=h closeBal %></td>
-				<td class="lbl-txt-align"><%= link_to image_tag('edit.png'), {:controller => controller.controller_name, :action => 'index', :summary_by => 'days', :from => value[:beginning_date], :to => value[:end_date], :is_summary_edit => true, :summary_period => 2, :txn_ledger => value[:ledger_id], :tab => controller.controller_name},   :title => l(:button_edit)  %> </td>
+				<td class="lbl-txt-align"><%=h "%.2f" % value[:DT].to_f %></td>
+				<td class="lbl-txt-align"><%=h "%.2f" % value[:CT].to_f %></td>
+				<td class="lbl-txt-align"><%=h "%.2f" % value[:CB].abs %></td>
+				<td class="lbl-txt-align"><%= link_to sprite_icon('edit'), {:controller => controller.controller_name, :action => 'index', :summary_by => 'days', :from => value[:beginning_date], :to => value[:end_date], :is_summary_edit => true, :summary_period => 2, :txn_ledger => value[:ledger_id], :tab => controller.controller_name},   :title => l(:button_edit)  %> </td>
 			</tr>
 		<% end %>
 	</tbody>
 	<% unless @summaryHash.blank? %>
 		<tr>
 			<th class="lbl-txt-align"><%=  l(:label_total) %></th>
-			<th class="lbl-txt-align"><%= "%.2f" % debitTotal %></th>
-			<th class="lbl-txt-align"><%= "%.2f" % creditTotal %></th>
-			<th class="lbl-txt-align"><%= "%.2f" % closeBal %></th>
+			<th class="lbl-txt-align"><%= "%.2f" % @debitTotal %></th>
+			<th class="lbl-txt-align"><%= "%.2f" % @creditTotal %></th>
+			<th class="lbl-txt-align"><%= "%.2f" % @closeBal.abs %></th>
 			<th></th>
 		</tr>
 	<% end %>
 <% end %>
 </table>
-</div>

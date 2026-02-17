@@ -7,7 +7,7 @@ include WkbillingHelper
 
 
 	def options_for_parent_select(value)
-		options_for_select([[l(:label_account), 'WkAccount'],
+		options_for_select([[l(:field_account), 'WkAccount'],
 							[l(:label_contact), 'WkCrmContact']],
 							value.blank? ? 'WkAccount' : value)
 	end
@@ -37,5 +37,20 @@ include WkbillingHelper
 		creditIssued = true if issuedCrCount>0
 		creditIssued
 	end
+
+	def getPayTypeHash
+		payType = WkCrmEnumeration.where(:enum_type => "PT").order(enum_type: :asc, name: :asc).pluck(:id, :name)
+		payTypeHash = Hash[*payType.flatten]
+		payTypeHash
+	end
 	
+	def getInvoiceOrgAmount(invoiceObj)
+		org_amount = invoiceObj.invoice_items.sum(:original_amount)
+		org_amount
+	end
+	
+	def getPaymentOrgAmount(invoiceObj)
+		org_amount = invoiceObj.payment_items.current_items.sum(:original_amount)
+		org_amount
+	end
 end

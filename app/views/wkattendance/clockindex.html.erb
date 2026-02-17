@@ -1,12 +1,5 @@
-<%= javascript_include_tag 'index', :plugin => "redmine_wktime" %>
-<h2><%= l(:report_attendance) %></h2>
-<script type="text/javascript">
-   wkattnIndexUrl = '<%=url_for(:controller => "wkattendance", :action => "index", :tab => "leave")%>';     
-   clockInOutUrl = '<%=url_for(:controller => "wkattendance", :action => "clockindex", :tab => "clock")%>';
-   payrollUrl = '<%=url_for(:controller => "wkpayroll", :action => "index", :tab => "payroll")%>';
-	wkSchedulingUrl = '<%=url_for(:controller => "wkscheduling", :action => "index", :tab => "wkscheduling")%>';
-	wkPublicHolidayUrl = '<%=url_for(:controller => "wkpublicholiday", :action => "index", :tab => "wkpublicholiday")%>';
-	wkSurveyUrl = '<%=url_for(:controller => "wksurvey", :action => "user_survey", :tab => "wksurvey", :surveyForType => 'User')%>';
-</script>
-<%= render_tabs time_expense_tabs %>
+<%= javascript_include_tag 'attendance', :plugin => "redmine_wktime" %>
+
+<%= title l(:report_attendance) %>
+<%= render partial: "wkattendance/render_hr_tabs" %>
 <%= render :partial => 'wkattendance/clk_index'%>

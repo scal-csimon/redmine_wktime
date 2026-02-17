@@ -1,6 +1,27 @@
-<h2><%= l(:label_brand) %></h2>
-<%= javascript_include_tag 'index', :plugin => "redmine_wktime" %>
-<%= render :partial => 'wkbrand/brand_list'%>
-<% content_for :sidebar do %>
-      <%= render :partial => 'wkproduct/sidebar' %>
+<%=  title l(:label_brand) %>
+<%= render partial: "wkproduct/render_inventory_tabs" %>
+
+<% name =session[controller_name].try(:[], :name) %>
+ <%= form_tag({:controller => 'wkbrand', :action => 'index'}, :method => :get, :id => 'query_form') do %>
+		 <%= hidden_field_tag "searchlist", controller_name %>
+	  <fieldset>
+			<%= hidden_field_tag 'tab', "wkbrand" %>
+			<label for='name'><%= l(:field_name) %>:</label>
+			<%= text_field_tag 'name', name, :size => 30 %>
+			<%= submit_tag l(:button_apply), :class => "small", :name => nil %>
+			<%= link_to sprite_icon('reload', l(:button_clear)), {tab: controller_name, clear: true}, :class => 'icon icon-reload' %>
+			<div style="float:right;">
+				<%= link_to sprite_icon('add', l(:label_new_brand)), url_for(:controller => controller_name, :action => 'edit'), :class => 'icon icon-add' %>&nbsp;
+				<%= render :partial => 'wkproduct/sidebar' %>
+			</div>
+		</fieldset>
+ <% end %>
+
+<% if @brandEntries.present? %>
+	<%= render :partial => 'wkbrand/brand_list'%>
+	<% other_formats_links do |f| %>
+		<%= f.link_to_with_query_parameters 'CSV', {} %>
+	<% end %>
+<% else %>
+	<p class="nodata"><%= l(:label_no_data) %></p>
 <% end %>

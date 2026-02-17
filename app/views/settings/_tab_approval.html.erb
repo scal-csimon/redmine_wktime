@@ -1,7 +1,9 @@
 <div class="splitcontent">
 	<fieldset class="box tabular">
 		<legend><%= l(:label_wk_approval_system) %></legend>
-
+		<p>	
+			<%= check_box_tag('settings[ftte_supervisor_based_approval]', 1, @settings['ftte_supervisor_based_approval'].to_i == 1) %> <label><%= l(:label_ftte_supervisor_based_approval) %></label>
+		</p>
 		<p>
 		<%= check_box_tag('settings[wktime_use_approval_system]', 1, @settings['wktime_use_approval_system'].to_i == 1) %> <label><%= l(:label_wk_use_approval_system) %></label>
 		</p>
@@ -16,11 +18,6 @@
 		  <label><%= l(:label_wk_submission_ack) %></label><%= text_area_tag 'settings[wktime_submission_ack]', l(:submission_ack_message_content)%>
 		</p>
 		<%= l(:label_redmine_restart_warning) %>
-
-		<p>	
-			<%= check_box_tag('settings[wktime_nonsub_mail_notification]', 1, @settings['wktime_nonsub_mail_notification'].to_i == 1) %>
-			<label><%= l(:label_wk_nonsub_mail_notification) %></label>
-		</p>
 		<p>	
 			<label><%= l(:label_wk_submission_deadline) %></label><%= l('date.order')[2] %>
 			<%= select_tag('settings[wktime_submission_deadline]', options_for_select([[l('date.day_names')[0], 0],

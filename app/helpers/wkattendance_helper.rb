@@ -15,36 +15,36 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-module WkattendanceHelper	
+module WkattendanceHelper
 	include WktimeHelper
-	require 'csv' 
+	require 'csv'
 	#Copied from UserHelper
 	def users_status_options_for_select(selected)
 		user_count_by_status = User.group('status').count.to_hash
-		options_for_select([[l(:label_all), ''],
+		options_for_select([[l(:label_all), 0],
                         ["#{l(:status_active)} (#{user_count_by_status[1].to_i})", '1'],
                         ["#{l(:status_registered)} (#{user_count_by_status[2].to_i})", '2'],
                         ["#{l(:status_locked)} (#{user_count_by_status[3].to_i})", '3']], selected.to_s)
 	end
-	
+
 	def getLeaveIssueIds
 		issueIds = ''
-		if(Setting.plugin_redmine_wktime['wktime_leave'].blank?)
+		if(getLeaveSettings.blank?)
 			issueIds = '-1'
 		else
-			Setting.plugin_redmine_wktime['wktime_leave'].each do |element|
+			getLeaveSettings.each do |element|
 				if issueIds!=''
-					issueIds = issueIds +','
+					issueIds = issueIds + ','
 				end
 			  listboxArr = element.split('|')
 			  issueIds = issueIds + listboxArr[0]
 			end
-		end	
+		end
 		issueIds
 	end
-	
-	def populateWkUserLeaves(processDt)		
-		leavesInfo = Setting.plugin_redmine_wktime['wktime_leave']
+
+	def populateWkUserLeaves(processDt)
+		leavesInfo = getLeaveSettings
 		leaveAccrual = Hash.new
 		accrualMultiplier = Hash.new
 		leaveAccAfter = Hash.new
@@ -62,43 +62,71 @@ module WkattendanceHelper
 				accrualMultiplier[issue_id] = leave.split('|')[5].blank? ? 1 : leave.split('|')[5].strip
 			end
 		end
-		
+
 		deleteWkUserLeaves(nil, currentMonthStart - 1)
-		
-		if !strIssueIds.blank?		
+
+		if !strIssueIds.blank?
 			from = currentMonthStart << 1
 			to = (from >> 1) - 1
-			
+
 			prev_mon_from = from << 1
 			prev_mon_to = (prev_mon_from >> 1) - 1
-			
-			defWorkTime = !Setting.plugin_redmine_wktime['wktime_default_work_time'].blank? ? Setting.plugin_redmine_wktime['wktime_default_work_time'].to_i : 8			
-			
-			qryStr = "select v2.id, v1.user_id, v1.created_on, v1.issue_id, v2.hours, ul.balance, " +
-					"ul.accrual_on, ul.used, ul.accrual, v3.spent_hours, wu.join_date " +
-					"from (select u.id as user_id, i.issue_id, u.status, u.type, u.created_on from users u , " +
-					"(select id as issue_id from issues where id in (#{strIssueIds})) i) v1 " +
-					"left join (select max(id) as id, user_id, issue_id, sum(hours) as hours from time_entries " +
-					"where spent_on between '#{from}' and '#{to}' group by user_id, issue_id) v2 " +
-					"on v2.user_id = v1.user_id and v2.issue_id = v1.issue_id " +
-					"left join (select user_id, sum(hours) as spent_hours from wk_attendances " +
-					"where start_time between '#{from}' and '#{to}' " +
-					"group by user_id) v3 on v3.user_id = v1.user_id " +
-					"left join wk_user_leaves ul on ul.user_id = v1.user_id and ul.issue_id = v1.issue_id " +
-					"and ul.accrual_on between '#{prev_mon_from}' and '#{prev_mon_to}' " +
-					"left join wk_users wu on wu.user_id = v1.user_id " +
-					"where v1.status = 1 and v1.type = 'User'"
-					
-			entries = TimeEntry.find_by_sql(qryStr)		
-			if !entries.blank?				
-				entries.each do |entry|				
+
+			defWorkTime = !Setting.plugin_redmine_wktime['wktime_default_work_time'].blank? ? Setting.plugin_redmine_wktime['wktime_default_work_time'].to_i : 8
+
+			# qryStr = "select v2.id, v1.user_id, v1.created_on, v1.issue_id, v2.hours, ul.balance, " +
+			# 		"ul.accrual_on, ul.used, ul.accrual, v3.spent_hours, wu.join_date " +
+			# 		"from (select u.id as user_id, i.issue_id, u.status, u.type, u.created_on from users u , " +
+			# 		"(select id as issue_id from issues where id in (#{strIssueIds})) i) v1 " +
+			# 		"left join (select max(id) as id, user_id, issue_id, sum(hours) as hours from time_entries " +
+			# 		"where spent_on between '#{from}' and '#{to}' group by user_id, issue_id) v2 " +
+			# 		"on v2.user_id = v1.user_id and v2.issue_id = v1.issue_id " +
+			# 		"left join (select user_id, sum(hours) as spent_hours from wk_attendances " +
+			# 		"where start_time between '#{from}' and '#{to}' " +
+			# 		"group by user_id) v3 on v3.user_id = v1.user_id " +
+			# 		"left join wk_user_leaves ul on ul.user_id = v1.user_id and ul.issue_id = v1.issue_id " +
+			# 		"and ul.accrual_on between '#{prev_mon_from}' and '#{prev_mon_to}' " +
+			# 		"left join wk_users wu on wu.user_id = v1.user_id " + get_comp_cond('v1') +
+			# 		"where v1.status = 1 and v1.type = 'User'"
+
+			qryStr = "select v2.id, v1.user_id, v1.created_on, v1.issue_id, v2.hours, ul.balance,
+					ul.accrual_on, ul.used, ul.accrual, v3.spent_hours, wu.join_date
+					from (
+						select u.id as user_id, i.issue_id, u.status, u.type, u.created_on
+						from users u , (
+							select id as issue_id
+							from issues
+							where id in (#{strIssueIds}) #{get_comp_cond('issues')}
+						) i
+						#{get_comp_cond('u', 'where')}
+					) v1
+					left join (
+						select max(id) as id, user_id, issue_id, sum(hours) as hours
+						from time_entries
+						where spent_on between '#{from}' and '#{to}' #{get_comp_cond('time_entries')}
+						group by user_id, issue_id
+					) v2 on v2.user_id = v1.user_id and v2.issue_id = v1.issue_id
+					left join (
+						select user_id, sum(hours) as spent_hours
+						from wk_attendances
+						where start_time between '#{from}' and '#{to}' #{get_comp_cond('wk_attendances')}
+						group by user_id
+					) v3 on v3.user_id = v1.user_id
+					left join wk_user_leaves ul on ul.user_id = v1.user_id and ul.issue_id = v1.issue_id
+						and ul.accrual_on between '#{prev_mon_from}' and '#{prev_mon_to}' #{get_comp_cond('ul')}
+					left join wk_users wu on wu.user_id = v1.user_id #{get_comp_cond('wu')}
+					where v1.status = 1 and v1.type = 'User'"
+
+			entries = TimeEntry.find_by_sql(qryStr)
+			if !entries.blank?
+				entries.each do |entry|
 					userJoinDate = entry.join_date.blank? ? entry.created_on.to_date : entry.join_date.to_date
 					yearDiff = (((currentMonthStart - 1) - userJoinDate).to_i / 365.0)
-					accrualAfter = leaveAccAfter["#{entry.issue_id}"].to_f						
+					accrualAfter = leaveAccAfter["#{entry.issue_id}"].to_f
 					includeAccrual = yearDiff >= accrualAfter ? true : false
 					accrual = leaveAccrual["#{entry.issue_id}"].to_f
 					multiplier = accrualMultiplier["#{entry.issue_id}"].to_f
-						
+
 					#Accrual will be given only when the user works atleast 11 days a month
 					minWorkingDays = Setting.plugin_redmine_wktime['wktime_minimum_working_days_for_accrual']
 					minWorkingDays = minWorkingDays.blank? ? 0 : minWorkingDays.to_f
@@ -111,11 +139,11 @@ module WkattendanceHelper
 					if !entry.used.blank? && entry.used > 0
 						no_of_holidays = no_of_holidays - (entry.used * multiplier)
 					end
-					#Reset					
-					lastMonth = (currentMonthStart - 1).month		
+					#Reset
+					lastMonth = (currentMonthStart - 1).month
 					if (lastMonth == resetMonth["#{entry.issue_id}"].to_i)
 						no_of_holidays = 0 if !no_of_holidays.blank? && no_of_holidays > 0
-					end				
+					end
 					userLeave = WkUserLeave.new
 					userLeave.user_id = entry.user_id
 					userLeave.issue_id = entry.issue_id
@@ -128,13 +156,13 @@ module WkattendanceHelper
 			end
 		end
 	end
-	
+
 	def convertHrTodays(hours)
 		defWorkTime = !Setting.plugin_redmine_wktime['wktime_default_work_time'].blank? ? Setting.plugin_redmine_wktime['wktime_default_work_time'].to_i : 8
 		noOfDays = (hours/defWorkTime).round(2).round unless hours.blank?
 		noOfDays
 	end
-	
+
 	def deleteWkUserLeaves(userId, accrualOn)
 		if !(userId.blank? || accrualOn.blank?)
 			WkUserLeave.where(user_id: userId).where(accrual_on: accrualOn).delete_all
@@ -146,13 +174,21 @@ module WkattendanceHelper
 			WkUserLeave.delete_all
 		end
 	end
-	
-	def addNewAttendance(startEntry,endEntry,userId) 
+
+	def addNewAttendance(startEntry,endEntry,userId)
 		wkattendance = WkAttendance.new
 		wkattendance.start_time = startEntry
 		wkattendance.end_time = endEntry
 		wkattendance.hours = computeWorkedHours(wkattendance.start_time,wkattendance.end_time, true) unless endEntry.blank?
 		wkattendance.user_id = userId
+		if isChecked('att_save_geo_location')
+			wkattendance.s_latitude = params[:latitude]
+			wkattendance.s_longitude = params[:longitude]
+			if endEntry.present?
+				wkattendance.e_latitude = params[:latitude]
+				wkattendance.e_longitude = params[:longitude]
+			end
+		end
 		wkattendance.save()
 		wkattendance
 	end
@@ -173,9 +209,13 @@ module WkattendanceHelper
 			else
 				endtime = endTime
 			end
-			
+
 			attnObj.end_time = endtime
 			attnObj.hours = computeWorkedHours(attnObj.start_time,attnObj.end_time, true)
+			if endtime.present? && isChecked('att_save_geo_location')
+				attnObj.e_latitude = params[:latitude]
+				attnObj.e_longitude = params[:longitude]
+			end
 			attnObj.save()
 			wkattendance = attnObj if wkattendance.blank?
 		else
@@ -183,18 +223,29 @@ module WkattendanceHelper
 		end
 		wkattendance
 	end
-		
+
 	def getWorkedHours(userId,fromDate,toDate)
 		workedHours = TimeEntry.where("user_id = #{userId} and spent_on between '#{fromDate}' and '#{toDate}' and issue_id not in (#{getLeaveIssueIds})").sum(:hours)
 		workedHours
 	end
-	
+
 	def getLeaveQueryStr(from,to)
-		queryStr = "select * from wk_user_leaves WHERE issue_id in (#{getLeaveIssueIds}) and accrual_on between '#{from}' and '#{to}'"
-		if !(validateERPPermission('A_TE_PRVLG') || User.current.admin?)
+		queryStr = "select *
+			from wk_user_leaves
+			WHERE issue_id in (#{getLeaveIssueIds}) and accrual_on between '#{from}' and '#{to}' #{get_comp_cond('wk_user_leaves')} "
+		if !(validateERPPermission('A_ATTEND') || User.current.admin?)
 			queryStr = queryStr + " and user_id = #{User.current.id} "
 		end
 		queryStr
+	end
+
+	def getUserLeave
+		userLeave = Array.new
+			if getLeaveSettings.present?
+				userLeaveIDs = getLeaveSettings.map{ |entry| entry.split('|').first }
+				userLeave = Issue.select(:id, :subject).where(id: userLeaveIDs).collect{ |issue| [issue.subject]}
+			end
+		userLeave
 	end
 
 end

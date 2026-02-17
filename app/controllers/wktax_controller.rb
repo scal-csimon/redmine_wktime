@@ -18,18 +18,32 @@
 class WktaxController < WkbillingController
 
 before_action :require_login
+menu_item :wkcrmenumeration
 
     def index
 		sort_init 'id', 'asc'
 		sort_update 'name' => "name",
 					'rate' => "rate_pct"
-		@tax_entries = nil
-		if params[:taxname].blank?
+
+		set_filter_session
+		name = getSession(:name)
+		if name.blank?
 			entries = WkTax.all
 		else
-			entries = WkTax.where("name like ?", "%#{params[:taxname]}%")
+			entries = WkTax.where("name like ?", "%#{name}%")
 		end
-		formPagination(entries.reorder(sort_clause))
+		entries = entries.reorder(sort_clause)
+		
+		respond_to do |format|
+			format.html {
+				formPagination(entries)
+			}
+			format.csv{
+				headers = {name: l(:label_taxname), rate: l(:label_rate)}
+				data = entries.map{|entry| {name: entry.name, rate: entry.rate_pct.to_s + '%'} }
+				send_data(csv_export(headers: headers, data: data), type: "text/csv; header=present", filename: "tax.csv")
+			}
+		end
     end
 	
 	def formPagination(entries)
@@ -68,7 +82,7 @@ before_action :require_login
 		redirect_back_or_default :action => 'index', :tab => params[:tab]
 	end	
   
-   def setLimitAndOffset		
+   	def setLimitAndOffset		
 		if api_request?
 			@offset, @limit = api_offset_and_limit
 			if !params[:limit].blank?
@@ -82,5 +96,10 @@ before_action :require_login
 			@limit = @entry_pages.per_page
 			@offset = @entry_pages.offset
 		end	
+	end
+
+	def set_filter_session
+		filters = [:name]
+		super(filters)
 	end
 end

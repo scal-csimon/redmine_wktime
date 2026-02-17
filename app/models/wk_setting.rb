@@ -1,0 +1,2 @@
+class WkSetting < ApplicationRecord
+end

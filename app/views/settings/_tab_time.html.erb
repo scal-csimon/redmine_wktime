@@ -6,14 +6,8 @@
 		</p>				
 		<p>
 			<label><%= l(:label_wk_previous_template_week) %></label>
-			
-			<%=     select_tag('settings[wktime_previous_template_week]',
-					   options_for_select([[1, 1],[2, 2],[3, 3],[4, 4],[5, 5]],
-										   
-											:selected => @settings['wktime_previous_template_week'].blank? ? 1 : @settings['wktime_previous_template_week'])) %>
-		</p>				
-		<p>
-			<%= check_box_tag('settings[wktime_enter_issue_as]', 1, @settings['wktime_enter_issue_as'].to_i == 1) %><label><%= "#{l(:label_wk_enter_issue_id)}/#{l(:field_subject)}" %></label>
+			<%=	select_tag('settings[wktime_previous_template_week]', options_for_select([["", ""], [1, 1],[2, 2],[3, 3],[4, 4],[5, 5]],
+					:selected => @settings['wktime_previous_template_week'])) %>
 		</p>
 		<p>
 			<%= check_box_tag('settings[wktime_allow_filter_issue]', 1, @settings['wktime_allow_filter_issue'].to_i == 1) %> <label><%= l(:label_wk_allow_filter_issue) %> </label>
@@ -28,13 +22,10 @@
 		<%= check_box_tag('settings[wktime_use_detail_popup]', 1, @settings['wktime_use_detail_popup'].to_i == 1) %> <label><%= l(:label_wk_use_detail_popup) %> </label>
 		</p>
 
-		<%
-			wktime_helper = Object.new.extend(WktimeHelper)
-			issue_custom_fields = IssueCustomField.order('name')
-			cfuser = wktime_helper.getCfListArr(issue_custom_fields, 'user', false)
-		%>
-		
-		
+		<p>
+			<%= check_box_tag('settings[te_save_geo_location]', 1, @settings['te_save_geo_location'].to_i == 1) %>
+			<label for="settings_te_save_geo_location"><%= l(:label_save_geo_location) %></label>
+		</p>
 </fieldset>
 </div>
 
@@ -45,30 +36,14 @@
 	<p>
 		<label><%= l(:label_wk_default_work_time) %></label><%= text_field_tag 'settings[wktime_default_work_time]', @settings['wktime_default_work_time'], :size => 3 %>
 	</p>
-	
-	<p>
-		<%= check_box_tag('settings[wktime_restr_max_hour]', 1, @settings['wktime_restr_max_hour'].to_i == 1, :onchange => "ValidateMinMaxHours('settings_wktime_max_hour_day', '#{l(:label_max_min_hours_day_msg)}');") %> <label><%= l(:label_wk_restr_max_hour) %></label>
-	</p>
 	<p>
 		<label><%= l(:label_wk_max_hour_day) %></label><%= text_field_tag 'settings[wktime_max_hour_day]', @settings['wktime_max_hour_day'], :size => 3, :onchange => "ValidateMinMaxHours(this.id, '#{l(:label_max_min_hours_day_msg)}');" %>
 	</p>
 	<p>
-		<%= check_box_tag('settings[wktime_restr_min_hour]', 1, @settings['wktime_restr_min_hour'].to_i == 1, :onchange => "ValidateMinMaxHours('settings_wktime_min_hour_day', '#{l(:label_max_min_hours_day_msg)}');") %> <label><%= l(:label_wk_restr_min_hour) %></label>
-	</p>
-	<p>
 		<label><%= l(:label_wk_min_hour_day) %></label><%= text_field_tag 'settings[wktime_min_hour_day]', @settings['wktime_min_hour_day'], :size => 3, :onchange => "ValidateMinMaxHours(this.id, '#{l(:label_max_min_hours_day_msg)}');" %>
 	</p>
-	
-	
-	<p>
-		<%= check_box_tag('settings[wktime_restr_max_hour_week]', 1, @settings['wktime_restr_max_hour_week'].to_i == 1, :onchange => "ValidateMinMaxHours('settings_wktime_max_hour_week', '#{l(:label_max_min_hours_day_msg)}');") %> <label><%= l(:label_wk_restr_max_hour_week) %></label>
-	</p>	
 	<p>
 		<label><%= l(:label_wk_max_hour_week) %></label><%= text_field_tag 'settings[wktime_max_hour_week]', @settings['wktime_max_hour_week'], :size => 3, :onchange => "ValidateMinMaxHours(this.id, '#{l(:label_max_min_hours_day_msg)}');" %>
-	</p>
-	
-	<p>
-		<%= check_box_tag('settings[wktime_restr_min_hour_week]', 1, @settings['wktime_restr_min_hour_week'].to_i == 1, :onchange => "ValidateMinMaxHours('settings_wktime_min_hour_week', '#{l(:label_max_min_hours_day_msg)}');") %> <label><%= l(:label_wk_restr_min_hour_week) %></label>
 	</p>
 	
 	<p>
@@ -107,29 +82,10 @@
 				options_for_select(trackers, :selected => @settings['wktime_issues_filter_tracker'].blank? ? 0 : @settings['wktime_issues_filter_tracker']), :multiple=> true)%>
 	</p>
 
-	<p>
-		<label><%=l(:label_wk_allow_user_filter_tracker)%></label>
-		 <%= check_box_tag('settings[wktime_allow_user_filter_tracker]',1,@settings['wktime_allow_user_filter_tracker'].to_i == 1) %>
-	</p>
-
 </fieldset>
 </div>
 
 <div style="clear:both"></div>
-<div class="splitcontentleft">
-<fieldset >
-	<legend><%= l(:label_display) %></legend>
-	<p>
-	  <label><%= l(:label_wk_project_dd_width) %></label><%= text_field_tag 'settings[wktime_project_dd_width]', @settings['wktime_project_dd_width'], :size => 3 %> px
-	</p>
-	<p>
-	  <label><%= l(:label_wk_issue_dd_width) %></label><%= text_field_tag 'settings[wktime_issue_dd_width]', @settings['wktime_issue_dd_width'], :size => 3 %> px
-	</p>
-	<p>
-	  <label><%= l(:label_wk_actv_dd_width) %></label><%= text_field_tag 'settings[wktime_actv_dd_width]', @settings['wktime_actv_dd_width'], :size => 3 %> px
-	</p>
-</fieldset>
-</div>
 <%custom_fields = TimeEntryCustomField.order('name')%>
 <% if !custom_fields.blank? %>
 <div style = "display:none">

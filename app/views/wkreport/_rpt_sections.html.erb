@@ -5,6 +5,7 @@
 </tr>
 
 <% total = 0 %>
+<% label_sub_total =  %>
 <% for i in from..to %>
 	<% if mainTotalHash[ledgerArr[i]] != 0 %>
 		<tr style="width:100%;">
@@ -25,8 +26,13 @@
 			<% end %>
 		<% end %>
 		<%= render partial: "rpt_rows", locals: { entries: mainEntriesHash[ledgerArr[i]] }%>
+		<% total = total + @mainTotalHash[@ledgerArr[i]] %>
 	<% end %>
-	<% total = total + mainTotalHash[ledgerArr[i]] %>
+	<tr style="width:100%;">
+		<td align="left" style="padding-left: 25px;"><b><%= l(:label_total) + " : "%></b></td>
+		<td style="border-top: solid thin;border-bottom: solid thin;"></td>
+		<td align="right" style="border-top: solid thin;border-bottom: solid thin;"><b><%= "%.2f" % total %></b></td>
+	</tr>
 <% end %>
 <tr style="width:100%;">
 	<td align="left" style="padding-left: 25px;border-top: solid thin;border-bottom: solid thin;" style=""><b><%= l(:label_total) + " : "%></b></td>

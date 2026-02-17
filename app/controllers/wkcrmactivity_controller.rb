@@ -35,6 +35,7 @@ class WkcrmactivityController < WkcrmController
 					'start_date' => "#{WkCrmActivity.table_name}.start_date",
 					'end_date' => "#{WkCrmActivity.table_name}.end_date",
 					'assigned_user_id' => "CONCAT(U.firstname, U.lastname)",
+					'created_at' => "#{WkCrmActivity.table_name}.created_at",
 					'updated_at' => "#{WkCrmActivity.table_name}.updated_at"
 
 		set_filter_session

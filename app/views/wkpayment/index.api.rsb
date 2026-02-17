@@ -4,12 +4,31 @@ api.array :wk_payment, api_meta(:total_count => @entry_count, :offset => @offset
       api.id entry.id
       api.name entry&.parent&.name
       api.type personTypeLabelHash[entry.entity_type] unless entry.entity_type.nil?
+      api.reference_number entry.reference_number
+      api.description entry.description
+      api.gl_tranasction_id entry.gl_transaction_id
       api.payment_date entry.payment_date.strftime("%Y-%m-%d")
+      api.payment_type_id entry.payment_type_id
       api.payment_type getPayTypeHash[entry.payment_type_id] unless entry.payment_type_id.nil?
       api.amount ("%.2f" % entry.payment_amount)  unless entry.payment_amount.blank?
       api.org_amount ("%.2f" % entry.payment_original_amount)  unless entry.payment_original_amount.blank?
 			api.org_currency entry.payment_items[0].original_currency unless entry.payment_items[0].blank?
 			api.currency entry.payment_items[0].currency unless entry.payment_items[0].blank?
+
+      api.array :payment_items do
+         entry.payment_items.each do |invItem|
+          api.invoice_item do
+            api.item_id invItem.try(:id)
+            api.payment_id invItem.payment_id
+            api.invoice_id invItem.invoice_id
+            api.amount invItem.amount
+            api.currency invItem.currency
+            api.original_currency invItem.original_currency
+            api.original_amount invItem.original_amount
+          end
+        end
+      end
+
     end
   end
 end

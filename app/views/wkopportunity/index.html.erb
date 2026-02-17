@@ -30,6 +30,12 @@
 				<%= text_field_tag 'oppname', accname.blank? ? "" : accname, size: 20 %>
 			</div>
 
+			<div style="display:flex; align-items:center; gap:5px; padding-left:10px;">
+				<label for='assigned_user' style="padding-left: 10px;"><%= l(:field_assigned_to) %></label>
+				<%=h select_tag("assigned_user_id", options_for_select(groupOfUsers, :selected => session[controller_name].try(:[], :assigned_user_id) )) %>
+				
+			</div>
+
 			<%= render :partial => 'wktime/date_range' %>
 		</div>
 		<p class="buttons">

@@ -54,6 +54,9 @@ include WkpayrollHelper
 		@invoice.parent_type = parentType
 		@invoice.invoice_type = invoiceType unless invoiceType.blank?
 		@invoice.invoice_number = getPluginSetting(getOrderNumberPrefix)
+		
+		logger.info "projectId" + projectId.to_s
+		
 		unless isgenerate
 			errorMsg = saveInvoice
 		else
@@ -119,6 +122,7 @@ include WkpayrollHelper
 		else
 			accountProject = WkAccountProject.where("parent_id = ? and parent_type = ? and project_id = ?", @invoice.parent_id, @invoice.parent_type, projectId)
 			errorMsg = addInvoiceItem(accountProject[0])
+
 		end
 		errorMsg
 	end
@@ -203,8 +207,8 @@ include WkpayrollHelper
 			# Calculate total hours for each issue each user
 			description = ""
 			quantity = 0
-			sumEntry = timeEntries.group(:issue_id, :user_id).sum(:hours)
-			issueSumEntry = timeEntries.group(:issue_id).sum(:hours)
+			sumEntry = timeEntries.group(:issue_id, :user_id).sum("CEIL(hours / 0.25 ) * 0.25")
+			issueSumEntry = timeEntries.group(:issue_id).sum("CEIL(hours / 0.25 ) * 0.25")
 			issueEntryDate = timeEntries.group(:issue_id, :spent_on).count(:spent_on) # select("time_entries.issue_id, time_entries.spent_on, count(time_entries.spent_on) as spent_on_count")
 			issueEntryDateHash =  Hash.new
 			issueEntryDate.each do |issEntry, count|
@@ -214,7 +218,7 @@ include WkpayrollHelper
 					issueEntryDateHash[issEntry[0]] << issEntry[1]
 				end
 			end
-			userTotalHours = timeEntries.group(:user_id).sum(:hours)
+			userTotalHours = timeEntries.group(:user_id).sum("CEIL(hours / 0.25 ) * 0.25")
 			invDay = getInvWeekStartDay #Setting.plugin_redmine_wktime['wktime_generate_invoice_day']
 			invMonthDay = getMonthStartDay #should get from settings
 			invoicedUsers = Array.new # In user billing avoid repeated entry for same user in generate invoice
@@ -254,7 +258,7 @@ include WkpayrollHelper
 				lastIssueId = entry.issue_id
 				if isUserBilling
 					if accountProject.itemized_bill
-						description = entry.issue.blank? ? entry.project.name : (isAccountBilling(accountProject) ? entry.project.name + ' - ' + entry.issue.subject : entry.issue.subject) + " - " + entry.user.membership(entry.project).roles[0].name
+						description = entry.issue.blank? ? entry.project.name : (isAccountBilling(accountProject) ? entry.issue.subject : entry.issue.subject) + " - " + entry.user.membership(entry.project).roles[0].name
 						quantity = sumEntry[[entry.issue_id, entry.user_id]]
 						# amount = rateHash['rate'] * quantity
 						# invItem = updateInvoiceItem(invItem, accountProject.project_id, description, rateHash['rate'], quantity, rateHash['currency'], 'i', amount, nil, nil, nil) unless isCreate
@@ -338,7 +342,7 @@ include WkpayrollHelper
 			pjtDescription = ""
 			pjtQuantity = 0
 			@currency = rateHash['currency']
-			sumEntry = timeEntries.group(:issue_id).sum(:hours)
+			sumEntry = timeEntries.group(:issue_id).sum("CEIL(hours / 0.25 ) * 0.25")
 			timeEntries.order(:issue_id).each_with_index do |entry, index|
 				if (lastIssueId == entry.issue_id || isContinue) && !isCreate
 					updateBilledEntry(entry, lasInvItmId)
@@ -359,7 +363,7 @@ include WkpayrollHelper
 					invItem = updateInvoiceItem(invItem, accountProject.project_id, pjtDescription, rateHash['rate'], pjtQuantity, rateHash['currency'], 'i', amount, nil, nil, nil, 'Issue', entry&.issue_id) unless isCreate
 				else
 					isContinue = true
-					pjtQuantity = timeEntries.sum(:hours)
+					pjtQuantity = timeEntries.sum("CEIL(hours / 0.25 ) * 0.25")
 					pjtDescription = accountProject.project.name
 					amount = rateHash['rate'] * pjtQuantity
 					invItem = updateInvoiceItem(invItem, accountProject.project_id, pjtDescription, rateHash['rate'], pjtQuantity, rateHash['currency'], 'i', amount, nil, nil, nil) unless isCreate

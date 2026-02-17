@@ -1,0 +1,17 @@
+ Lead by Source: 
+  chart_type: bar
+  code_str:   "LeadCountBySource = WkLead.joins('LEFT JOIN wk_crm_enumerations ON wk_leads.lead_source_id = wk_crm_enumerations.id')
+    .select('wk_crm_enumerations.name as source, count(wk_leads.id) as count')
+    .group(:source);
+
+    
+    leads_hash = LeadCountBySource.map {|c| [c.source,c.count] }.to_h ;
+    fields = leads_hash.keys.sort ;
+    @leads_Arr = Array.new ;
+    fields.each {|c| @leads_Arr << leads_hash[c]};{ 'fields' => fields };
+    "
+  x_title: "Sales Stages"
+  y_title: "label_amount"
+  names_of_data:
+  - data: "@leads_Arr[0..(field_names['fields'].length - 1)]"
+    title: "Lead by source"

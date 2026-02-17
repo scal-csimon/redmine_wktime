@@ -1,0 +1,30 @@
+ Opportunies: 
+  chart_type: bar
+  code_str:   "Opportunity_Ammount_by_Sale_Stage = WkOpportunity.joins('LEFT JOIN wk_crm_enumerations ON wk_opportunities.sales_stage_id = wk_crm_enumerations.id')
+    .where('wk_crm_enumerations.position not like ?', '8%')
+    .select('
+        CASE 
+            WHEN SUBSTR(wk_crm_enumerations.name, 1, 1) = 2 THEN \\'2. Prospection\\'
+            WHEN SUBSTR(wk_crm_enumerations.name, 1, 1) = 3 THEN \\'3. Qualification\\'
+            WHEN SUBSTR(wk_crm_enumerations.name, 1, 1) = 4 THEN \\'4. Développement\\'
+            WHEN SUBSTR(wk_crm_enumerations.name, 1, 1) = 5 THEN \\'5. Contrat\\'
+            WHEN SUBSTR(wk_crm_enumerations.name, 1, 1) = 6 THEN \\'6. Opération\\'
+            WHEN SUBSTR(wk_crm_enumerations.name, 1, 1) = 7 THEN \\'7. Maintient\\'
+            END as sale_stage_group,
+        wk_crm_enumerations.position,
+        count(wk_opportunities.id) as count
+    ')
+    .group(:sale_stage_group)
+    .order('sale_stage_group');
+
+    
+    opportunities_hash = Opportunity_Ammount_by_Sale_Stage.map {|c| [c.sale_stage_group,c.count] }.to_h ;
+    fields = opportunities_hash.keys ;
+    @opportunities_Arr = Array.new ;
+    fields.each {|c| @opportunities_Arr << opportunities_hash[c]};{ 'fields' => fields };
+    "
+  x_title: "Sales Stages"
+  y_title: "label_amount"
+  names_of_data:
+  - data: "@opportunities_Arr[0..(field_names['fields'].length - 1)]"
+    title: "Opportunities by Sale Stage"

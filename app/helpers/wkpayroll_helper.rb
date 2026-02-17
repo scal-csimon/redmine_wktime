@@ -598,7 +598,7 @@ module WkpayrollHelper
 			userSalary = WkSalary.new
 			userSalary.user_id = list[:user_id]
 			userSalary.currency = list[:currency]
-			userSalary.amount = (list[:amount]).round
+			userSalary.amount = (list[:amount]).round(2)
 			userSalary.salary_component_id = list[:salary_component_id]
 			userSalary.salary_date = list[:salary_date]
 				if !userSalary.save()

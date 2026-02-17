@@ -75,12 +75,21 @@ class WkledgerController < WkaccountingController
 		wkledger.currency = Setting.plugin_redmine_wktime['wktime_currency']
 		wkledger.opening_balance = params[:opening_balance].blank? ? 0 : params[:opening_balance]
 		wkledger.owner = wkledger.ledger_type =='SY' ? 's' : 'u'
+		wkledger.igrf_account_number = params[:igrf_account_number]
+		wkledger.igrf_account_description = params[:igrf_account_description]
 		unless wkledger.save()
 			errorMsg = wkledger.errors.full_messages.join("<br>")
 		end
 		if errorMsg.nil?
-		    redirect_to :controller => 'wkledger',:action => 'index' , :tab => 'wkledger'
+		    
 		    flash[:notice] = l(:notice_successful_update)
+			
+		    if params[:wktime_save_continue]
+			    redirect_to :controller => 'wkledger', :action => 'edit' ,  :ledger_id => (params[:ledger_id].to_i + 1) , :tab => 'wkledger' 
+		    else                                                                                                
+			      redirect_to :controller => 'wkledger',:action => 'index', :tab => 'wkledger' 
+		    end 
+				
 		else
 			flash[:error] = errorMsg
 		    redirect_to :controller => 'wkledger',:action => 'edit'

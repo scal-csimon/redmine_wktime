@@ -25,8 +25,26 @@
 			</tr>
 		</table>	
 	</fieldset>
+	<fieldset class="box tabular" >
+		<legend>IGRF</legend>	
+		<table >
+			<tr>
+				<th align="left"><%= l(:field_igrf_number) %></th>
+				<td align="left" style="padding-left:40px;">
+					<%=h text_field_tag("igrf_account_number", (@ledgersDetail[0].blank? ? "" : @ledgersDetail[0].igrf_account_number),:size => 20) %>
+				</td>
+			</tr>
+			<tr>
+				<th align="left"><%= l(:label_igrf_description) %></th>
+				<td align="left" style="padding-left:40px;">
+					<%=h text_field_tag("igrf_account_description", (@ledgersDetail[0].blank? ? "" : @ledgersDetail[0].igrf_account_description),:size => 20) %>
+				</td>			   
+			</tr>
+		</table>	
+	</fieldset>
 <% if validateERPPermission("A_ACC_PRVLG") %>	
 	<%= submit_tag l(:button_save), :class => "small", :name => nil %>
+	<%= submit_tag l(:button_save_continue), :name => "wktime_save_continue" , :class => "small" %>
 <% end %>
 <% end %>
 </div>

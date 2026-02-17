@@ -184,9 +184,11 @@ include WkdocumentHelper
 				relatedId = WkCrmContact.includes(:lead).where(:account_id => nil, :contact_id => nil).where(wk_leads: { status: ["C", nil] }).where("wk_crm_contacts.contact_type = '#{type}' or wk_crm_contacts.contact_type = '#{hookType}'").order(:first_name, :last_name)
 			end
 		else
+
 			hookType = call_hook(:additional_type)
 			if hookType.blank? || !isAccountType
-				relatedId = WkAccount.where(:account_type => type).order(:name)
+				#relatedId = WkAccount.where(:account_type => type).order(:name)
+				relatedId = WkAccount.order(:name)
 			else
 				relatedId = WkAccount.where("wk_accounts.account_type = '#{type}' or wk_accounts.account_type = '#{hookType}'").order(:name)
 			end

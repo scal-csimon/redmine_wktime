@@ -6,6 +6,7 @@ api.array :wk_invoice, api_meta(:total_count => @entry_count, :offset => @offset
       api.name entry.parent.name
       api.project entry.invoice_items[0].project.name if entry.invoice_items[0].present? && entry.invoice_items[0].project.present?
       api.invoice_date entry.invoice_date
+      api.gl_tranasction_id entry.gl_transaction_id
       api.start_date entry.start_date
       api.end_date entry.end_date
       api.status (entry.status == 'o' ? 'open' : 'closed')

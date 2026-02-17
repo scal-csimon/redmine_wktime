@@ -5,12 +5,15 @@ class WkopportunityController < WkcrmController
 	include WkopportunityHelper
   accept_api_auth :index
 
-  def index
-		sort_init 'updated_at', 'desc'
+    def index
+
+		sort_init 'sales_stage', 'asc'
+		#sort_init 'updated_at', 'desc'
+
 
 		sort_update 'opportunity_name' => "#{WkOpportunity.table_name}.name",
 					'parent_type' => "#{WkOpportunity.table_name}.parent_type",
-					'sales_stage' => "E.name",
+					'sales_stage' => "E.position",
 					'amount' => "#{WkOpportunity.table_name}.amount",
 					'close_date' => "#{WkOpportunity.table_name}.close_date",
 					'assigned_user_id' => "CONCAT(U.firstname, U.lastname)",
@@ -45,7 +48,18 @@ class WkopportunityController < WkcrmController
 		end
 		unless oppName.blank?
 			filterSql = filterSql + " AND" unless filterSql.blank?
+			filterSql = filterSql + "("
 			filterSql = filterSql + " LOWER(wk_opportunities.name) like LOWER(:name)"
+			
+			#search for account name
+			filterSql = filterSql + " OR LOWER(A.name) like LOWER(:name)"
+
+			#search for contact name
+			filterSql = filterSql + " OR LOWER(C.first_name) like LOWER(:name) OR LOWER(C.last_name) like LOWER(:name)"
+
+
+			filterSql = filterSql + ")"
+
 			filterHash[:name] = "%#{oppName}%"
 		end
 
@@ -171,7 +185,7 @@ class WkopportunityController < WkcrmController
 
 
     def set_filter_session
-		filters = [:period_type, :oppname, :account_id, :period, :from, :to, :sales_stage, :contact_id, :account_id, :polymorphic_filter]
+		filters = [:period_type, :oppname, :account_id, :period, :from, :to, :sales_stage, :contact_id, :account_id, :polymorphic_filter, :assigned_user_id, :open_closed, :status]
 		super(filters, {:from => @from, :to => @to})
     end
 

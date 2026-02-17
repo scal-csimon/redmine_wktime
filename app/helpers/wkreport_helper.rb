@@ -48,7 +48,7 @@ module WkreportHelper
 
 	def hasViewPermission(reportName)
 		ret = true
-		if reportName == 'report_profit_loss' || reportName == 'report_balance_sheet' || reportName == 'report_trial_balance' || reportName == 'report_cash_flow'
+		if reportName == 'report_profit_loss'  || reportName == 'report_balance_sheet' || reportName == 'report_trial_balance' || reportName == 'report_profit_loss_IGRF' || reportName == 'report_balance_sheet_IGRF'  || reportName == 'report_cash_flow'
 			ret = validateERPPermission("B_ACC_PRVLG") || validateERPPermission("A_ACC_PRVLG")
 		elsif reportName == 'report_lead_conversion' || reportName == 'report_sales_activity'
 			ret = (validateERPPermission("B_CRM_PRVLG") || validateERPPermission("A_CRM_PRVLG") ) && isChecked('wktime_enable_crm_module')
